@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=600, height=600, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="Today's scheduled walkthrough calls, pulled from Salesforce.">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <title>My Day</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="home" class="screen">
+      <header class="header">
+        <h1>My Day</h1>
+        <span class="header-meta" id="status-indicator">Loading&hellip;</span>
+      </header>
+
+      <div class="content">
+        <div id="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">Loading today&rsquo;s calls&hellip;</div>
+        </div>
+
+        <div id="error" class="error-container hidden">
+          <div class="error-icon">&#9888;</div>
+          <div class="error-message">Could not load your calls.</div>
+          <button class="nav-item focusable" data-action="refresh">Retry</button>
+        </div>
+
+        <div id="myday-list" class="list-container hidden"></div>
+      </div>
+
+      <nav class="nav-bar">
+        <button class="nav-item focusable" data-action="refresh">&#8635; Refresh</button>
+      </nav>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

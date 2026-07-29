@@ -1,0 +1,4 @@
+﻿_http_stdout.log
+_http_stderr.log
+.vercel/
+node_modules/
