@@ -224,5 +224,127 @@ body {
   padding: 40px;
 }
 
+/* --- Back button --- */
+.back-btn {
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 22px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  min-height: 44px;
+}
+
+/* --- Tab bar (Status / Handoff / DNA) --- */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.tab-item {
+  flex: 1;
+  padding: 10px 8px;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  min-height: 44px;
+}
+.tab-item.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.tab-item:focus { background: var(--bg-card); color: var(--text-primary); }
+
+.tab-panel.hidden { display: none; }
+
+/* --- Cards (detail screen) --- */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.card-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+.card-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* --- Action grid (Status tab disposition buttons) --- */
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.action-btn {
+  padding: 16px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  min-height: 60px;
+}
+.action-btn:focus { background: var(--bg-card); }
+.action-btn[data-disposition="completed"]:focus   { border-color: var(--success); box-shadow: 0 0 20px rgba(52,211,153,0.4); }
+.action-btn[data-disposition="no_show"]:focus,
+.action-btn[data-disposition="canceled"]:focus    { border-color: var(--danger); box-shadow: 0 0 20px rgba(255,68,102,0.4); }
+.action-btn[data-disposition="rescheduled"]:focus { border-color: var(--accent-warm); box-shadow: 0 0 20px rgba(242,169,59,0.4); }
+
+/* --- Handoff --- */
+.nav-item.danger {
+  background: rgba(255, 68, 102, 0.15);
+  color: var(--danger);
+}
+.nav-item.danger:focus {
+  background: rgba(255, 68, 102, 0.28);
+  border-color: var(--danger);
+  box-shadow: 0 0 20px rgba(255, 68, 102, 0.3);
+}
+
+/* --- Toast --- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--accent-primary);
+  transition: transform 0.3s ease;
+  z-index: 100;
+  pointer-events: none;
+  max-width: 536px;
+  text-align: center;
+}
+.toast.visible { transform: translateX(-50%) translateY(0); }
+.toast.error { border-color: var(--danger); }
+.toast.success { border-color: var(--success); }
+
 /* --- Utility --- */
 .hidden { display: none !important; }

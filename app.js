@@ -19,6 +19,8 @@
     error: null,
     data: { walkthroughs: [] },
     cache: {},
+    selectedCall: null,
+    activeTab: 'status',
   };
 
   // ==================== DOM REFS ====================
@@ -66,7 +68,11 @@
 
     var focusables = Array.from(
       container.querySelectorAll('.focusable:not([disabled]):not(.hidden)')
-    );
+    ).filter(function(el) {
+      // exclude focusables inside a hidden tab panel
+      var panel = el.closest('.tab-panel');
+      return !panel || !panel.classList.contains('hidden');
+    });
     if (focusables.length === 0) return;
 
     var current = document.activeElement;
@@ -100,7 +106,7 @@
       }
     }
 
-    setLoading(true);
+    if (!options.silent) setLoading(true);
     clearError();
 
     return fetch(url)
@@ -110,14 +116,29 @@
       })
       .then(function(data) {
         state.cache[cacheKey] = { data: data, timestamp: Date.now() };
-        setLoading(false);
+        if (!options.silent) setLoading(false);
         return data;
       })
       .catch(function(err) {
-        setLoading(false);
+        if (!options.silent) setLoading(false);
         setError(err.message || 'Failed to load data');
         throw err;
       });
+  }
+
+  function apiPost(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    }).then(function(res) {
+      return res.json().then(function(data) {
+        if (!res.ok || data.success === false) {
+          throw new Error(data.error || ('HTTP ' + res.status));
+        }
+        return data;
+      });
+    });
   }
 
   // ==================== UI HELPERS ====================
@@ -149,6 +170,21 @@
     state.error = null;
     var errorEl = document.getElementById('error');
     if (errorEl) errorEl.classList.add('hidden');
+  }
+
+  function showToast(message, type) {
+    var toast = document.getElementById('toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toast';
+      toast.className = 'toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = 'toast' + (type ? ' ' + type : '');
+    toast.offsetHeight; // reflow so the transition re-triggers
+    toast.classList.add('visible');
+    setTimeout(function() { toast.classList.remove('visible'); }, 2500);
   }
 
   // ==================== MY DAY RENDERING ====================
@@ -186,6 +222,7 @@
           '<span class="wt-sub">' + escapeHtml(w.sub) + '</span>' +
         '</div>' +
         '<span class="wt-tag ' + tagClass(w.tag) + '">' + escapeHtml(w.tag) + '</span>';
+      row.addEventListener('click', function() { openCallDetail(w); });
       list.appendChild(row);
     });
 
@@ -216,6 +253,119 @@
       });
   }
 
+  // ==================== CALL DETAIL (Status / Handoff / DNA) ====================
+  function openCallDetail(call) {
+    state.selectedCall = call;
+    navigateTo('detail');
+  }
+
+  function renderDetailHeader() {
+    var call = state.selectedCall;
+    var nameEl = document.getElementById('detail-name');
+    if (nameEl) nameEl.textContent = call ? call.name : 'Call';
+  }
+
+  function switchTab(tabName) {
+    state.activeTab = tabName;
+
+    document.querySelectorAll('.tab-item').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.tab-panel').forEach(function(panel) {
+      panel.classList.toggle('hidden', panel.id !== 'tab-' + tabName);
+    });
+
+    if (tabName === 'status') {
+      renderStatusTab();
+    } else if (tabName === 'handoff') {
+      loadHandoffTab();
+    }
+
+    // refocus onto something visible in the new panel
+    var panel = document.getElementById('tab-' + tabName);
+    if (panel) focusFirst(screens['detail']);
+  }
+
+  function renderStatusTab() {
+    var call = state.selectedCall;
+    var stageEl = document.getElementById('status-current-stage');
+    if (stageEl) stageEl.textContent = call ? (call.sub || '—') : '—';
+  }
+
+  function markCall(disposition) {
+    var call = state.selectedCall;
+    if (!call) return;
+    var url = CONFIG.api.baseUrl + '/api/mark-call';
+    showToast('Saving…');
+    apiPost(url, { oppId: call.oppId, disposition: disposition })
+      .then(function(data) {
+        call.sub = data.newStage;
+        renderStatusTab();
+        state.cache = {}; // stale now — force a fresh /api/myday next time home loads
+        showToast('Marked ' + disposition.replace('_', ' '), 'success');
+      })
+      .catch(function(err) {
+        showToast('Failed: ' + err.message, 'error');
+      });
+  }
+
+  function loadHandoffTab() {
+    var call = state.selectedCall;
+    if (!call) return;
+    var loading = document.getElementById('handoff-loading');
+    var content = document.getElementById('handoff-content');
+    if (loading) loading.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+
+    var url = CONFIG.api.baseUrl + '/api/handoff-status?eventId=' + encodeURIComponent(call.id);
+    apiGet(url, { cacheKey: 'handoff_' + call.id, noCache: true, silent: true })
+      .then(function(data) {
+        renderHandoffTab(data);
+      })
+      .catch(function() {
+        renderHandoffTab({ handedOff: false });
+      })
+      .finally(function() {
+        if (loading) loading.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+      });
+  }
+
+  function renderHandoffTab(data) {
+    var title = document.getElementById('handoff-status-title');
+    var sub = document.getElementById('handoff-status-sub');
+    var btn = document.getElementById('handoff-btn');
+
+    if (data.handedOff) {
+      if (title) title.textContent = 'Handed off — in claimables';
+      if (sub) {
+        var when = data.handoffTimestamp ? new Date(data.handoffTimestamp).toLocaleString() : '';
+        sub.textContent = (data.originalOwnerName ? 'From ' + data.originalOwnerName : '') +
+          (when ? ' · ' + when : '');
+      }
+      if (btn) { btn.classList.add('hidden'); }
+    } else {
+      if (title) title.textContent = 'Not handed off';
+      if (sub) sub.textContent = 'Owner stays with you until someone claims it.';
+      if (btn) { btn.classList.remove('hidden'); }
+    }
+  }
+
+  function handleHandoff() {
+    var call = state.selectedCall;
+    if (!call) return;
+    var url = CONFIG.api.baseUrl + '/api/handoff';
+    showToast('Handing off…');
+    apiPost(url, { eventId: call.id })
+      .then(function() {
+        showToast('Call handed off', 'success');
+        loadHandoffTab();
+      })
+      .catch(function(err) {
+        showToast('Failed: ' + err.message, 'error');
+      });
+  }
+
   // ==================== ACTION HANDLING ====================
   function handleAction(action, element) {
     switch (action) {
@@ -224,6 +374,15 @@
         break;
       case 'refresh':
         loadMyDay();
+        break;
+      case 'tab':
+        switchTab(element.dataset.tab);
+        break;
+      case 'mark-call':
+        markCall(element.dataset.disposition);
+        break;
+      case 'handoff':
+        handleHandoff();
         break;
       default:
         handleAppAction(action, element);
@@ -238,6 +397,9 @@
   function onScreenEnter(screenId) {
     if (screenId === 'home') {
       loadMyDay();
+    } else if (screenId === 'detail') {
+      renderDetailHeader();
+      switchTab('status');
     }
   }
 
