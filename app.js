@@ -247,6 +247,11 @@
           status.textContent = state.data.walkthroughs.length + ' today · updated ' +
             now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
+        // rows just replaced the loading spinner — focus never lands on
+        // them otherwise, which leaves D-pad select with nothing to activate
+        if (state.currentScreen === 'home') {
+          focusFirst(screens['home']);
+        }
       })
       .catch(function() {
         // setError already called by apiGet
