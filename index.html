@@ -3,86 +3,192 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=600, height=600, initial-scale=1.0, user-scalable=no">
-  <meta name="description" content="Today's scheduled walkthrough calls, pulled from Salesforce.">
+  <meta name="description" content="JARVIS — AlterMe sales intelligence on your glasses. Schedule, goals, quota, and prospect DNA.">
   <meta name="mrbd-web-app-capable" content="yes">
-  <title>My Day</title>
+  <title>JARVIS</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <div id="app">
-    <div id="home" class="screen">
-      <header class="header">
-        <h1>My Day</h1>
-        <span class="header-meta" id="status-indicator">Loading&hellip;</span>
-      </header>
 
-      <div class="content">
-        <div id="loading" class="loading-container">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Loading today&rsquo;s calls&hellip;</div>
-        </div>
-
-        <div id="error" class="error-container hidden">
-          <div class="error-icon">&#9888;</div>
-          <div class="error-message">Could not load your calls.</div>
-          <button class="nav-item focusable" data-action="refresh">Retry</button>
-        </div>
-
-        <div id="myday-list" class="list-container hidden"></div>
+    <!-- ============ Splash ============ -->
+    <div id="splash" class="screen">
+      <div class="splash-rings">
+        <div class="ring-outer"></div>
+        <div class="ring-arc"></div>
+        <div class="ring-conic"></div>
+        <div class="ring-purple"></div>
+        <div class="ring-pulse"></div>
+        <div class="splash-logo"></div>
       </div>
-
-      <nav class="nav-bar">
-        <button class="nav-item focusable" data-action="refresh">&#8635; Refresh</button>
-      </nav>
+      <div class="splash-title">J.A.R.V.I.S.</div>
+      <div class="splash-brand">AlterMe</div>
+      <div class="splash-sys">Intelligence System</div>
     </div>
 
-    <div id="detail" class="screen hidden">
+    <!-- ============ Home: Overview | My Day ============ -->
+    <div id="home" class="screen hidden">
       <header class="header">
-        <button class="back-btn focusable" data-action="back">&#8592;</button>
-        <h1 id="detail-name">Name</h1>
+        <div class="header-logo"></div>
+        <span class="header-word">JARVIS</span>
+        <span class="header-fill"></span>
+        <span class="header-meta" id="home-meta"></span>
+        <button class="icon-btn focusable" data-action="refresh" aria-label="Refresh">&#8635;</button>
       </header>
 
+      <div class="tab-bar" id="main-tabs">
+        <button class="tab-item focusable active" data-action="main-tab" data-tab="overview">Overview</button>
+        <button class="tab-item focusable" data-action="main-tab" data-tab="myday">My Day</button>
+      </div>
+
+      <div class="content-wrap">
+        <!-- Overview panel -->
+        <div id="panel-overview" class="content main-panel">
+          <div id="ov-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Syncing with Salesforce&hellip;</div>
+          </div>
+          <div id="ov-error" class="error-container hidden">
+            <div class="error-icon">&#9888;</div>
+            <div class="error-message">Could not reach JARVIS.</div>
+            <button class="retry-btn focusable" data-action="refresh">Retry</button>
+          </div>
+          <div id="ov-content" class="hidden">
+            <div class="call-row" id="ov-calls"></div>
+            <div class="stat-row" id="ov-stats" style="margin-top:10px"></div>
+            <div class="card" style="margin-top:10px">
+              <div class="goal-card-head">
+                <span class="card-label">Deals Closed</span>
+                <button class="goal-edit-btn focusable" data-action="open-goals">&#9998; Goals</button>
+              </div>
+              <div id="ov-goal-bars"></div>
+            </div>
+            <div class="ring-row" style="margin-top:10px" id="ov-rings"></div>
+          </div>
+        </div>
+
+        <!-- My Day panel -->
+        <div id="panel-myday" class="content main-panel hidden">
+          <div id="md-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading today&rsquo;s calls&hellip;</div>
+          </div>
+          <div id="md-error" class="error-container hidden">
+            <div class="error-icon">&#9888;</div>
+            <div class="error-message">Could not load your calls.</div>
+            <button class="retry-btn focusable" data-action="refresh">Retry</button>
+          </div>
+          <div id="myday-list" class="list-container hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Goals editor ============ -->
+    <div id="goals" class="screen hidden">
+      <header class="header">
+        <button class="back-btn focusable" data-action="back" aria-label="Back">&#8592;</button>
+        <span class="header-word" style="font-size:18px;letter-spacing:2px">Goals</span>
+        <span class="header-fill"></span>
+        <span class="header-meta">Deals per period</span>
+      </header>
+      <div class="content" style="gap:10px;justify-content:center">
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Daily</div>
+            <div class="g-sub">deals per day</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="daily" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-daily">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="daily" data-delta="1">+</button>
+        </div>
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Weekly</div>
+            <div class="g-sub">deals per week</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="weekly" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-weekly">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="weekly" data-delta="1">+</button>
+        </div>
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Monthly</div>
+            <div class="g-sub">deals per month</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="monthly" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-monthly">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="monthly" data-delta="1">+</button>
+        </div>
+        <div class="action-row" style="margin-top:6px">
+          <button class="action-big focusable" data-action="back" style="background:var(--card);color:var(--text-sub)">Cancel</button>
+          <button class="action-big primary focusable" data-action="save-goals">Save Goals</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Profile detail: Overview | DNA ============ -->
+    <div id="detail" class="screen hidden">
+      <header class="header">
+        <button class="back-btn focusable" data-action="back" aria-label="Back">&#8592;</button>
+        <h1 class="detail-title" id="detail-name">Prospect</h1>
+        <span class="header-meta" id="detail-time"></span>
+      </header>
+
+      <div class="badge-row" id="detail-badges"></div>
+
       <div class="tab-bar">
-        <button class="tab-item focusable" data-action="tab" data-tab="status">Status</button>
-        <button class="tab-item focusable" data-action="tab" data-tab="handoff">Handoff</button>
+        <button class="tab-item focusable active" data-action="tab" data-tab="profile">Overview</button>
         <button class="tab-item focusable" data-action="tab" data-tab="dna">DNA</button>
       </div>
 
-      <div class="content">
-        <div id="tab-status" class="tab-panel">
-          <div class="card">
-            <div class="card-title">Current Stage</div>
-            <div class="card-value" id="status-current-stage">&mdash;</div>
-          </div>
-          <div class="action-grid">
-            <button class="action-btn focusable" data-action="mark-call" data-disposition="completed">Completed</button>
-            <button class="action-btn focusable" data-action="mark-call" data-disposition="no_show">No Show</button>
-            <button class="action-btn focusable" data-action="mark-call" data-disposition="rescheduled">Rescheduled</button>
-            <button class="action-btn focusable" data-action="mark-call" data-disposition="canceled">Canceled</button>
-          </div>
-        </div>
-
-        <div id="tab-handoff" class="tab-panel hidden">
-          <div id="handoff-loading" class="loading-container">
+      <div class="content-wrap">
+        <div id="tab-profile" class="content tab-panel">
+          <div id="profile-loading" class="loading-container">
             <div class="loading-spinner"></div>
           </div>
-          <div id="handoff-content" class="hidden">
-            <div class="card">
-              <div class="card-title" id="handoff-status-title">Not handed off</div>
-              <div class="card-subtitle" id="handoff-status-sub"></div>
+          <div id="profile-content" class="hidden">
+            <div class="card stage-card">
+              <span class="card-label">Stage</span>
+              <span class="stage-value" id="profile-stage">&mdash;</span>
             </div>
-            <button class="nav-item danger focusable" id="handoff-btn" data-action="handoff">Hand Off This Call</button>
+            <div class="demo-grid" id="profile-demo" style="margin-top:2px"></div>
+            <div class="action-row" style="margin-top:4px">
+              <button class="action-big primary focusable" data-action="open-status">&#9998; Status</button>
+              <button class="action-big danger focusable" id="handoff-btn" data-action="handoff">&#10132; Hand Off</button>
+            </div>
+            <div class="card hidden" id="handoff-info">
+              <span class="card-label">Handoff</span>
+              <div style="font-size:13px;color:var(--text-sub);margin-top:4px" id="handoff-info-text"></div>
+            </div>
           </div>
         </div>
 
-        <div id="tab-dna" class="tab-panel hidden">
-          <div class="empty-message">DNA results coming soon.</div>
+        <div id="tab-dna" class="content tab-panel hidden">
+          <div id="dna-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Reading DNA report&hellip;</div>
+          </div>
+          <div id="dna-content" class="list-container hidden"></div>
+          <div id="dna-empty" class="empty-message hidden"></div>
+        </div>
+      </div>
+
+      <!-- Status sheet overlay -->
+      <div id="status-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Update Status</div>
+          <button class="sheet-btn focusable s-green" data-action="mark-call" data-disposition="completed"><span class="s-dot d-green"></span>Completed</button>
+          <button class="sheet-btn focusable s-rose" data-action="mark-call" data-disposition="no_show"><span class="s-dot d-rose"></span>No Show</button>
+          <button class="sheet-btn focusable s-amber" data-action="mark-call" data-disposition="rescheduled"><span class="s-dot d-amber"></span>Rescheduled</button>
+          <button class="sheet-btn focusable s-rose" data-action="mark-call" data-disposition="canceled"><span class="s-dot d-rose"></span>Canceled</button>
+          <button class="sheet-btn focusable" data-action="close-sheet"><span class="s-dot d-muted"></span>Cancel</button>
         </div>
       </div>
     </div>
+
   </div>
-  <script src="app.js"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

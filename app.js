@@ -3,28 +3,33 @@
 
   // ==================== CONFIG ====================
   var CONFIG = {
-    appName: 'My Day',
-    storageKey: 'mdg_myday',
+    appName: 'JARVIS',
     api: {
       baseUrl: 'https://missing-depend-asking-consumption.trycloudflare.com',
-      cacheDuration: 60 * 1000, // 1 min — this is a live schedule, keep it fresh
+      cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
+    splashMinMs: 2200,
   };
 
   // ==================== STATE ====================
   var state = {
-    currentScreen: 'home',
+    currentScreen: 'splash',
     screenHistory: [],
-    isLoading: false,
-    error: null,
-    data: { walkthroughs: [] },
     cache: {},
+    walkthroughs: [],
+    overview: null,
+    mainTab: 'overview',       // 'overview' | 'myday'
+    detailTab: 'profile',      // 'profile' | 'dna'
     selectedCall: null,
-    activeTab: 'status',
+    profile: null,
+    goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
+    countdownTimer: null,
+    sheetOpen: false,
   };
 
-  // ==================== DOM REFS ====================
   var screens = {};
+
+  function $(id) { return document.getElementById(id); }
 
   function collectScreens() {
     document.querySelectorAll('.screen').forEach(function(s) {
@@ -35,77 +40,100 @@
   // ==================== NAVIGATION ====================
   function navigateTo(screenId, options) {
     options = options || {};
-    var addToHistory = options.addToHistory !== false;
-
-    if (addToHistory && state.currentScreen) {
+    if (options.addToHistory !== false && state.currentScreen && state.currentScreen !== 'splash') {
       state.screenHistory.push(state.currentScreen);
     }
-
     Object.values(screens).forEach(function(s) { s.classList.add('hidden'); });
     if (screens[screenId]) {
       screens[screenId].classList.remove('hidden');
       state.currentScreen = screenId;
       onScreenEnter(screenId);
-      focusFirst(screens[screenId]);
+      // land focus on content, not header chrome, when a panel has content
+      var panel = null;
+      if (screenId === 'home') {
+        panel = state.mainTab === 'overview' ? $('panel-overview') : $('panel-myday');
+      }
+      var els = panel ? visibleFocusables(panel) : [];
+      if (els.length) els[0].focus();
+      else focusFirst(screens[screenId]);
     }
   }
 
   function navigateBack() {
+    if (state.sheetOpen) { closeSheet(); return; }
     if (state.screenHistory.length > 0) {
       navigateTo(state.screenHistory.pop(), { addToHistory: false });
     }
   }
 
-  // ==================== FOCUS MANAGEMENT ====================
-  function focusFirst(container) {
-    var el = container.querySelector('.focusable:not([disabled]):not(.hidden)');
-    if (el) el.focus();
-  }
-
-  function getFocusables(container) {
+  // ==================== FOCUS ====================
+  function visibleFocusables(container) {
     return Array.from(
-      container.querySelectorAll('.focusable:not([disabled]):not(.hidden)')
+      container.querySelectorAll('.focusable:not([disabled])')
     ).filter(function(el) {
-      // exclude focusables inside a hidden tab panel
-      var panel = el.closest('.tab-panel');
-      return !panel || !panel.classList.contains('hidden');
+      if (el.closest('.hidden')) return false;
+      // when the status sheet is open, trap focus inside it
+      if (state.sheetOpen) return !!el.closest('.sheet-backdrop');
+      if (el.closest('.sheet-backdrop')) return false;
+      return true;
     });
   }
 
-  // True spatial navigation: each direction only considers elements actually
-  // positioned in that direction on screen (by center point), and picks the
-  // closest one — weighted so it prefers staying aligned on the cross-axis
-  // (e.g. "down" prefers the item directly below, not diagonally adjacent).
-  // Falls back to wrapping to the far edge if nothing exists in that direction.
+  function focusFirst(container) {
+    var els = visibleFocusables(container);
+    if (els.length) els[0].focus();
+  }
+
+  // Re-renders replace DOM nodes, which silently drops focus to <body> and
+  // strands the D-pad. After any async render, put focus back into the panel.
+  function restoreFocusTo(panel) {
+    var active = document.activeElement;
+    if (active && active !== document.body && document.contains(active) &&
+        active.classList && active.classList.contains('focusable')) {
+      return; // focus survived
+    }
+    var els = visibleFocusables(panel);
+    if (els.length) els[0].focus();
+    else focusFirst(screens[state.currentScreen] || document.body);
+  }
+
+  // Spatial navigation: pick the nearest element actually in the pressed
+  // direction, weighted to prefer staying aligned on the cross-axis.
+  // Returns true if focus moved to an in-direction candidate.
   function moveFocus(direction) {
     var container = screens[state.currentScreen];
-    if (!container) return;
+    if (!container) return false;
 
-    var focusables = getFocusables(container);
-    if (focusables.length === 0) return;
+    var focusables = visibleFocusables(container);
+    if (focusables.length === 0) return false;
 
     var current = document.activeElement;
-    if (!focusables.includes(current)) {
+    if (focusables.indexOf(current) === -1) {
       focusFirst(container);
-      return;
+      return true;
+    }
+
+    // Inside a swipeable panel, left/right stays within the panel — reaching
+    // its edge pages between tabs instead of jumping to header controls.
+    if (direction === 'left' || direction === 'right') {
+      var panel = current.closest('.main-panel, .tab-panel');
+      if (panel) {
+        focusables = focusables.filter(function(el) { return panel.contains(el); });
+      }
     }
 
     var cRect = current.getBoundingClientRect();
     var cx = cRect.left + cRect.width / 2;
     var cy = cRect.top + cRect.height / 2;
 
-    var candidate = null;
-    var candidateScore = Infinity;
-    var wrapCandidate = null;
-    var wrapScore = -Infinity;
+    var candidate = null, candidateScore = Infinity;
+    var wrapCandidate = null, wrapScore = -Infinity;
 
     focusables.forEach(function(el) {
       if (el === current) return;
       var r = el.getBoundingClientRect();
-      var ex = r.left + r.width / 2;
-      var ey = r.top + r.height / 2;
-      var dx = ex - cx;
-      var dy = ey - cy;
+      var dx = (r.left + r.width / 2) - cx;
+      var dy = (r.top + r.height / 2) - cy;
 
       var primary, cross, inDirection, oppositeDirection;
       switch (direction) {
@@ -116,60 +144,56 @@
       }
 
       if (inDirection) {
-        // heavily penalize cross-axis drift so it prefers the aligned item
         var score = primary + Math.abs(cross) * 2;
-        if (score < candidateScore) {
-          candidateScore = score;
-          candidate = el;
-        }
+        if (score < candidateScore) { candidateScore = score; candidate = el; }
       } else if (oppositeDirection) {
-        // furthest element in the opposite direction = wrap-around target
         var wScore = primary - Math.abs(cross) * 2;
-        if (wScore > wrapScore) {
-          wrapScore = wScore;
-          wrapCandidate = el;
-        }
+        if (wScore > wrapScore) { wrapScore = wScore; wrapCandidate = el; }
       }
     });
 
-    var next = candidate || wrapCandidate;
-    if (next) {
-      next.focus();
-      next.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (candidate) {
+      candidate.focus();
+      candidate.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return true;
     }
+
+    // Edge of the home panels: left/right pages between Overview and My Day
+    if (state.currentScreen === 'home') {
+      if (direction === 'left' && state.mainTab === 'myday') { switchMainTab('overview'); return true; }
+      if (direction === 'right' && state.mainTab === 'overview') { switchMainTab('myday'); return true; }
+    }
+    // Detail screen: left/right page between Overview and DNA
+    if (state.currentScreen === 'detail' && !state.sheetOpen) {
+      if (direction === 'left' && state.detailTab === 'dna') { switchDetailTab('profile'); return true; }
+      if (direction === 'right' && state.detailTab === 'profile') { switchDetailTab('dna'); return true; }
+    }
+
+    if (wrapCandidate && (direction === 'up' || direction === 'down')) {
+      wrapCandidate.focus();
+      wrapCandidate.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return true;
+    }
+    return false;
   }
 
-  // ==================== API LAYER ====================
+  // ==================== API ====================
   function apiGet(url, options) {
     options = options || {};
     var cacheKey = options.cacheKey || url;
-    var cacheDuration = options.cacheDuration || CONFIG.api.cacheDuration;
+    var duration = options.cacheDuration || CONFIG.api.cacheDuration;
 
     if (!options.noCache && state.cache[cacheKey]) {
-      var cached = state.cache[cacheKey];
-      if (Date.now() - cached.timestamp < cacheDuration) {
-        return Promise.resolve(cached.data);
-      }
+      var hit = state.cache[cacheKey];
+      if (Date.now() - hit.timestamp < duration) return Promise.resolve(hit.data);
     }
-
-    if (!options.silent) setLoading(true);
-    clearError();
-
-    return fetch(url)
-      .then(function(res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function(data) {
-        state.cache[cacheKey] = { data: data, timestamp: Date.now() };
-        if (!options.silent) setLoading(false);
-        return data;
-      })
-      .catch(function(err) {
-        if (!options.silent) setLoading(false);
-        setError(err.message || 'Failed to load data');
-        throw err;
-      });
+    return fetch(url).then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function(data) {
+      state.cache[cacheKey] = { data: data, timestamp: Date.now() };
+      return data;
+    });
   }
 
   function apiPost(url, body) {
@@ -187,39 +211,22 @@
     });
   }
 
-  // ==================== UI HELPERS ====================
-  function setLoading(isLoading) {
-    state.isLoading = isLoading;
-    var spinner = document.getElementById('loading');
-    var list = document.getElementById('myday-list');
-    if (spinner) spinner.classList.toggle('hidden', !isLoading);
-    if (isLoading && list) list.classList.add('hidden');
-    var status = document.getElementById('status-indicator');
-    if (status && isLoading) status.textContent = 'Loading…';
+  // ==================== HELPERS ====================
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
   }
 
-  function setError(message) {
-    state.error = message;
-    var errorEl = document.getElementById('error');
-    var list = document.getElementById('myday-list');
-    if (errorEl) {
-      errorEl.classList.remove('hidden');
-      var msgEl = errorEl.querySelector('.error-message');
-      if (msgEl) msgEl.textContent = message;
-    }
-    if (list) list.classList.add('hidden');
-    var status = document.getElementById('status-indicator');
-    if (status) status.textContent = 'Error';
-  }
-
-  function clearError() {
-    state.error = null;
-    var errorEl = document.getElementById('error');
-    if (errorEl) errorEl.classList.add('hidden');
+  function fmtAmt(amt) {
+    if (!amt) return '';
+    if (amt >= 1000000) return '$' + (amt / 1000000).toFixed(1) + 'M';
+    if (amt >= 1000) return '$' + (amt / 1000).toFixed(1) + 'k';
+    return '$' + Math.round(amt).toLocaleString();
   }
 
   function showToast(message, type) {
-    var toast = document.getElementById('toast');
+    var toast = $('toast');
     if (!toast) {
       toast = document.createElement('div');
       toast.id = 'toast';
@@ -230,10 +237,169 @@
     toast.className = 'toast' + (type ? ' ' + type : '');
     toast.offsetHeight; // reflow so the transition re-triggers
     toast.classList.add('visible');
-    setTimeout(function() { toast.classList.remove('visible'); }, 2500);
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function() { toast.classList.remove('visible'); }, 2500);
   }
 
-  // ==================== MY DAY RENDERING ====================
+  // ==================== OVERVIEW TAB ====================
+  function loadOverview(silent) {
+    if (!silent) {
+      $('ov-loading').classList.remove('hidden');
+      $('ov-content').classList.add('hidden');
+      $('ov-error').classList.add('hidden');
+    }
+    return apiGet(CONFIG.api.baseUrl + '/api/overview', { cacheKey: 'overview' })
+      .then(function(data) {
+        state.overview = data;
+        renderOverview(data);
+        $('ov-loading').classList.add('hidden');
+        $('ov-error').classList.add('hidden');
+        $('ov-content').classList.remove('hidden');
+        if (state.currentScreen === 'home' && state.mainTab === 'overview') {
+          restoreFocusTo($('panel-overview'));
+        }
+      })
+      .catch(function() {
+        $('ov-loading').classList.add('hidden');
+        if (!state.overview) $('ov-error').classList.remove('hidden');
+      });
+  }
+
+  function countdownLabel(iso) {
+    var s = Math.floor((new Date(iso).getTime() - Date.now()) / 1000);
+    if (s <= 0) return 'Now';
+    var d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm';
+  }
+
+  function liveLabel(iso) {
+    var m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    return m <= 0 ? 'LIVE' : 'LIVE · ' + m + 'm';
+  }
+
+  function renderOverview(data) {
+    var meta = $('home-meta');
+    if (meta) meta.textContent = data.date || '';
+
+    // --- Current / Next call cards ---
+    var calls = $('ov-calls');
+    calls.innerHTML = '';
+    if (data.currentCall) {
+      calls.appendChild(callCard('Current Call', liveLabel(data.currentCall.iso), data.currentCall, true));
+    }
+    if (data.nextCall) {
+      calls.appendChild(callCard('Next Call', countdownLabel(data.nextCall.iso), data.nextCall, false));
+    }
+    if (!data.currentCall && !data.nextCall) {
+      calls.innerHTML = '<div class="card" style="flex:1"><span class="card-label">Calls</span>' +
+        '<div style="font-size:14px;color:var(--text-sub);margin-top:6px">No upcoming calls scheduled.</div></div>';
+    }
+
+    // --- Stat tiles ---
+    var d = data.deals || {};
+    var today = d.today || {}, month = d.month || {};
+    $('ov-stats').innerHTML =
+      statTile('Calls Today', data.callsToday, 'scheduled', 'accent-blue') +
+      statTile('Walkthroughs', data.walkthroughsToday, 'completed today', '') +
+      statTile('Today Deals', today.count || 0, fmtAmt(today.amount) || 'none closed', 'accent-green') +
+      statTile('Month Deals', month.count || 0, fmtAmt(month.amount) || 'none yet', 'accent-amber');
+
+    // --- Goal bars ---
+    var g = data.goals || {};
+    var week = d.week || {};
+    $('ov-goal-bars').innerHTML =
+      goalBar('Today', today.count || 0, g.daily, 'c-green') +
+      goalBar('This Week', week.count || 0, g.weekly, 'c-blue') +
+      goalBar('This Month', month.count || 0, g.monthly, 'c-amber');
+
+    // --- Rings ---
+    var q = data.quota || {}, cr = data.consultRate || {};
+    var quotaSub = q.amount
+      ? (q.unit === 'deals'
+          ? Math.round(q.achieved) + ' of ' + Math.round(q.amount) + ' deals'
+          : fmtAmt(q.achieved) + ' of ' + fmtAmt(q.amount))
+      : 'not connected';
+    var crSub = (cr.completed || 0) + '/' + (cr.total || 0) + ' this month';
+    $('ov-rings').innerHTML =
+      ringCard('Monthly Quota', q.pct || 0, quotaSub, '#6ee7a8') +
+      ringCard('Consult Rate', cr.pct || 0, crSub, '#f5c97a');
+
+    startCountdownTicker();
+  }
+
+  function callCard(label, timer, call, isLive) {
+    var btn = document.createElement('button');
+    btn.className = 'call-card focusable' + (isLive ? ' live' : '');
+    btn.dataset.action = 'open-call-by-opp';
+    btn.dataset.oppId = call.oppId || '';
+    if (call.iso) btn.dataset.iso = call.iso;
+    btn.dataset.live = isLive ? '1' : '';
+    btn.innerHTML =
+      '<span class="card-label">' + escapeHtml(label) + '</span>' +
+      '<span class="call-timer">' + escapeHtml(timer) + '</span>' +
+      (call.name ? '<span class="call-name">' + escapeHtml(call.name) + '</span>' : '');
+    return btn;
+  }
+
+  function statTile(label, value, sub, accentClass) {
+    return '<div class="stat-tile ' + accentClass + '">' +
+      '<div class="card-label">' + escapeHtml(label) + '</div>' +
+      '<div class="stat-value">' + escapeHtml(String(value == null ? 0 : value)) + '</div>' +
+      '<div class="stat-sub">' + escapeHtml(sub || '') + '</div></div>';
+  }
+
+  function goalBar(label, value, goal, colorClass) {
+    var pct;
+    if (goal > 0) pct = Math.max(3, Math.min(100, Math.round(value / goal * 100)));
+    else pct = value > 0 ? 100 : 3;
+    var target = goal > 0 ? '<span class="goal-target"> / ' + goal + '</span>' : '';
+    return '<div class="goal-row">' +
+      '<div class="goal-row-top">' +
+        '<span class="goal-row-label">' + escapeHtml(label) + '</span>' +
+        '<span class="goal-row-value">' + value + target + '</span>' +
+      '</div>' +
+      '<div class="goal-track"><div class="goal-fill ' + colorClass + '" style="width:' + pct + '%"></div></div>' +
+    '</div>';
+  }
+
+  function ringCard(label, pct, sub, color) {
+    var r = 40, C = 2 * Math.PI * r;
+    var dash = (C * Math.min(Math.max(pct, 0), 100) / 100).toFixed(1);
+    return '<div class="ring-card">' +
+      '<div class="ring-wrap">' +
+        '<svg width="96" height="96">' +
+          '<circle cx="48" cy="48" r="' + r + '" fill="none" stroke="var(--border-soft)" stroke-width="7"/>' +
+          '<circle cx="48" cy="48" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="7" ' +
+            'stroke-dasharray="' + dash + ' ' + C.toFixed(1) + '" stroke-linecap="round"/>' +
+        '</svg>' +
+        '<div class="ring-pct">' + pct + '%</div>' +
+      '</div>' +
+      '<div class="card-label">' + escapeHtml(label) + '</div>' +
+      '<div class="ring-sub">' + escapeHtml(sub) + '</div>' +
+    '</div>';
+  }
+
+  // Tick the call timers once a minute — only while the overview is visible.
+  function startCountdownTicker() {
+    stopCountdownTicker();
+    state.countdownTimer = setInterval(function() {
+      if (state.currentScreen !== 'home' || state.mainTab !== 'overview') return;
+      document.querySelectorAll('.call-card').forEach(function(el) {
+        var iso = el.dataset.iso;
+        if (!iso) return;
+        var timerEl = el.querySelector('.call-timer');
+        if (timerEl) timerEl.textContent = el.dataset.live ? liveLabel(iso) : countdownLabel(iso);
+      });
+    }, 30000);
+  }
+
+  function stopCountdownTicker() {
+    if (state.countdownTimer) { clearInterval(state.countdownTimer); state.countdownTimer = null; }
+  }
+
+  // ==================== MY DAY TAB ====================
   function tagClass(tag) {
     var t = (tag || '').toLowerCase();
     if (t === 'sold') return 'tag-purchased';
@@ -243,20 +409,36 @@
     return '';
   }
 
+  function loadMyDay(silent) {
+    if (!silent) {
+      $('md-loading').classList.remove('hidden');
+      $('myday-list').classList.add('hidden');
+      $('md-error').classList.add('hidden');
+    }
+    return apiGet(CONFIG.api.baseUrl + '/api/myday', { cacheKey: 'myday' })
+      .then(function(data) {
+        state.walkthroughs = data.walkthroughs || [];
+        renderMyDay(state.walkthroughs);
+        $('md-loading').classList.add('hidden');
+        $('md-error').classList.add('hidden');
+        $('myday-list').classList.remove('hidden');
+        if (state.currentScreen === 'home' && state.mainTab === 'myday') {
+          restoreFocusTo($('panel-myday'));
+        }
+      })
+      .catch(function() {
+        $('md-loading').classList.add('hidden');
+        if (!state.walkthroughs.length) $('md-error').classList.remove('hidden');
+      });
+  }
+
   function renderMyDay(walkthroughs) {
-    var list = document.getElementById('myday-list');
-    var errorEl = document.getElementById('error');
-    if (errorEl) errorEl.classList.add('hidden');
-    if (!list) return;
-
+    var list = $('myday-list');
     list.innerHTML = '';
-
     if (!walkthroughs || walkthroughs.length === 0) {
       list.innerHTML = '<div class="empty-message">No calls scheduled today.</div>';
-      list.classList.remove('hidden');
       return;
     }
-
     walkthroughs.forEach(function(w, index) {
       var row = document.createElement('button');
       row.className = 'wt-row focusable';
@@ -271,194 +453,336 @@
         '<span class="wt-tag ' + tagClass(w.tag) + '">' + escapeHtml(w.tag) + '</span>';
       list.appendChild(row);
     });
-
-    list.classList.remove('hidden');
   }
 
-  function escapeHtml(s) {
-    var d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  }
-
-  function loadMyDay() {
-    var url = CONFIG.api.baseUrl + '/api/myday';
-    apiGet(url, { cacheKey: 'myday' })
-      .then(function(data) {
-        state.data.walkthroughs = data.walkthroughs || [];
-        renderMyDay(state.data.walkthroughs);
-        var status = document.getElementById('status-indicator');
-        if (status) {
-          var now = new Date();
-          status.textContent = state.data.walkthroughs.length + ' today · updated ' +
-            now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        }
-        // rows just replaced the loading spinner — focus never lands on
-        // them otherwise, which leaves D-pad select with nothing to activate
-        if (state.currentScreen === 'home') {
-          focusFirst(screens['home']);
-        }
-      })
-      .catch(function() {
-        // setError already called by apiGet
-      });
-  }
-
-  // ==================== CALL DETAIL (Status / Handoff / DNA) ====================
-  function openCallDetail(call) {
-    state.selectedCall = call;
-    navigateTo('detail');
-  }
-
-  function renderDetailHeader() {
-    var call = state.selectedCall;
-    var nameEl = document.getElementById('detail-name');
-    if (nameEl) nameEl.textContent = call ? call.name : 'Call';
-  }
-
-  function switchTab(tabName) {
-    state.activeTab = tabName;
-
-    document.querySelectorAll('.tab-item').forEach(function(btn) {
+  // ==================== MAIN TABS ====================
+  function switchMainTab(tabName) {
+    state.mainTab = tabName;
+    document.querySelectorAll('#main-tabs .tab-item').forEach(function(btn) {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
-    document.querySelectorAll('.tab-panel').forEach(function(panel) {
-      panel.classList.toggle('hidden', panel.id !== 'tab-' + tabName);
-    });
+    $('panel-overview').classList.toggle('hidden', tabName !== 'overview');
+    $('panel-myday').classList.toggle('hidden', tabName !== 'myday');
 
-    if (tabName === 'status') {
-      renderStatusTab();
-    } else if (tabName === 'handoff') {
-      loadHandoffTab();
+    // Render immediately from whatever we already have so focus has somewhere
+    // to land, then refresh silently in the background.
+    if (tabName === 'overview') {
+      if (state.overview) {
+        renderOverview(state.overview);
+        $('ov-loading').classList.add('hidden');
+        $('ov-content').classList.remove('hidden');
+      }
+      loadOverview(true);
+    } else {
+      if (state.walkthroughs.length) {
+        renderMyDay(state.walkthroughs);
+        $('md-loading').classList.add('hidden');
+        $('myday-list').classList.remove('hidden');
+      }
+      loadMyDay(true);
     }
 
-    // refocus onto something visible in the new panel
-    var panel = document.getElementById('tab-' + tabName);
-    if (panel) focusFirst(screens['detail']);
+    var panel = tabName === 'overview' ? $('panel-overview') : $('panel-myday');
+    var els = visibleFocusables(panel);
+    if (els.length) els[0].focus();
+    else focusFirst(screens['home']);
   }
 
-  function renderStatusTab() {
-    var call = state.selectedCall;
-    var stageEl = document.getElementById('status-current-stage');
-    if (stageEl) stageEl.textContent = call ? (call.sub || '—') : '—';
+  // ==================== GOALS EDITOR ====================
+  function openGoals() {
+    var g = (state.overview && state.overview.goals) || { daily: 0, weekly: 0, monthly: 0 };
+    state.goalsDraft = { daily: g.daily || 0, weekly: g.weekly || 0, monthly: g.monthly || 0 };
+    navigateTo('goals');
+    renderGoalsDraft();
   }
 
-  function markCall(disposition) {
-    var call = state.selectedCall;
-    if (!call) return;
-    var url = CONFIG.api.baseUrl + '/api/mark-call';
-    showToast('Saving…');
-    apiPost(url, { oppId: call.oppId, disposition: disposition })
+  function renderGoalsDraft() {
+    ['daily', 'weekly', 'monthly'].forEach(function(k) {
+      var el = $('goal-val-' + k);
+      if (el) el.textContent = String(state.goalsDraft[k]);
+    });
+  }
+
+  function adjustGoal(key, delta) {
+    state.goalsDraft[key] = Math.max(0, (state.goalsDraft[key] || 0) + delta);
+    renderGoalsDraft();
+  }
+
+  function saveGoals() {
+    showToast('Saving goals…');
+    apiPost(CONFIG.api.baseUrl + '/api/goals', { goals: state.goalsDraft })
       .then(function(data) {
-        call.sub = data.newStage;
-        renderStatusTab();
-        state.cache = {}; // stale now — force a fresh /api/myday next time home loads
-        showToast('Marked ' + disposition.replace('_', ' '), 'success');
+        if (state.overview) state.overview.goals = data.goals;
+        delete state.cache['overview'];
+        showToast('Goals saved', 'success');
+        navigateBack();
+        loadOverview(true);
       })
       .catch(function(err) {
         showToast('Failed: ' + err.message, 'error');
       });
   }
 
-  function loadHandoffTab() {
+  // ==================== PROFILE DETAIL ====================
+  function openCallDetail(call) {
+    state.selectedCall = call;
+    state.profile = null;
+    state.detailTab = 'profile';
+    navigateTo('detail');
+  }
+
+  function openCallByOpp(oppId) {
+    var match = state.walkthroughs.filter(function(w) { return w.oppId === oppId; })[0];
+    if (match) { openCallDetail(match); return; }
+    // next call may be beyond today — load what we can from the schedule
+    loadMyDay(true).then(function() {
+      var m = state.walkthroughs.filter(function(w) { return w.oppId === oppId; })[0];
+      if (m) openCallDetail(m);
+      else showToast('Not on today’s schedule');
+    });
+  }
+
+  function switchDetailTab(tabName) {
+    state.detailTab = tabName;
+    document.querySelectorAll('#detail .tab-item').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    $('tab-profile').classList.toggle('hidden', tabName !== 'profile');
+    $('tab-dna').classList.toggle('hidden', tabName !== 'dna');
+    if (tabName === 'dna') loadDna();
+    var panel = tabName === 'profile' ? $('tab-profile') : $('tab-dna');
+    var els = visibleFocusables(panel);
+    if (els.length) els[0].focus();
+    else focusFirst(screens['detail']);
+  }
+
+  function renderDetailHeader() {
+    var call = state.selectedCall || {};
+    $('detail-name').textContent = call.name || 'Prospect';
+    $('detail-time').textContent = call.timeLabel || '';
+    $('detail-badges').innerHTML = '';
+  }
+
+  function statusBadgeClass(status) {
+    var s = (status || '').toUpperCase();
+    if (s.indexOf('HOT') !== -1) return 'b-rose';
+    if (s.indexOf('WARM') !== -1) return 'b-amber';
+    if (s.indexOf('COLD') !== -1) return 'b-blue';
+    return 'b-purple';
+  }
+
+  function loadProfile() {
     var call = state.selectedCall;
     if (!call) return;
-    var loading = document.getElementById('handoff-loading');
-    var content = document.getElementById('handoff-content');
-    if (loading) loading.classList.remove('hidden');
-    if (content) content.classList.add('hidden');
+    $('profile-loading').classList.remove('hidden');
+    $('profile-content').classList.add('hidden');
 
-    var url = CONFIG.api.baseUrl + '/api/handoff-status?eventId=' + encodeURIComponent(call.id);
-    apiGet(url, { cacheKey: 'handoff_' + call.id, noCache: true, silent: true })
-      .then(function(data) {
-        renderHandoffTab(data);
+    apiGet(CONFIG.api.baseUrl + '/api/profile?oppId=' + encodeURIComponent(call.oppId), {
+      cacheKey: 'profile_' + call.oppId, cacheDuration: 120 * 1000,
+    })
+      .then(function(p) {
+        state.profile = p;
+        renderProfile(p);
       })
       .catch(function() {
-        renderHandoffTab({ handedOff: false });
+        // fall back to what the schedule row already knows
+        renderProfile({
+          name: call.name, stage: call.sub, status: '', customerType: '', awareness: '',
+          gender: '', age: null, location: '', currentWeight: null, goalWeight: null, phone: '',
+          accountId: call.accountId,
+        });
       })
-      .finally(function() {
-        if (loading) loading.classList.add('hidden');
-        if (content) content.classList.remove('hidden');
+      .then(function() {
+        $('profile-loading').classList.add('hidden');
+        $('profile-content').classList.remove('hidden');
+        if (state.currentScreen === 'detail' && state.detailTab === 'profile' &&
+            !screens['detail'].contains(document.activeElement)) {
+          focusFirst(screens['detail']);
+        }
+        loadHandoffState();
       });
   }
 
-  function renderHandoffTab(data) {
-    var title = document.getElementById('handoff-status-title');
-    var sub = document.getElementById('handoff-status-sub');
-    var btn = document.getElementById('handoff-btn');
+  function renderProfile(p) {
+    // badges under the header
+    var badges = [];
+    if (p.status) badges.push('<span class="badge ' + statusBadgeClass(p.status) + '">' + escapeHtml(p.status) + '</span>');
+    if (p.customerType) badges.push('<span class="badge b-purple">' + escapeHtml(p.customerType) + '</span>');
+    if (p.awareness) badges.push('<span class="badge b-blue">' + escapeHtml(p.awareness) + '</span>');
+    $('detail-badges').innerHTML = badges.join('');
 
+    $('profile-stage').textContent = p.stage || (state.selectedCall && state.selectedCall.sub) || '—';
+
+    var cells = [
+      ['Gender', p.gender],
+      ['Age', p.age != null ? String(p.age) : ''],
+      ['Location', p.location],
+      ['Weight', p.currentWeight != null ? p.currentWeight + ' lbs' : ''],
+      ['Goal', p.goalWeight != null ? p.goalWeight + ' lbs' : ''],
+      ['Phone', p.phone],
+    ];
+    $('profile-demo').innerHTML = cells
+      .filter(function(c) { return c[1]; })
+      .map(function(c) {
+        return '<div class="demo-cell"><div class="demo-label">' + escapeHtml(c[0]) +
+          '</div><div class="demo-value">' + escapeHtml(String(c[1])) + '</div></div>';
+      })
+      .join('');
+  }
+
+  function loadHandoffState() {
+    var call = state.selectedCall;
+    if (!call || !call.id) return;
+    apiGet(CONFIG.api.baseUrl + '/api/handoff-status?eventId=' + encodeURIComponent(call.id), {
+      cacheKey: 'handoff_' + call.id, noCache: true,
+    })
+      .then(function(data) { renderHandoffState(data); })
+      .catch(function() { renderHandoffState({ handedOff: false }); });
+  }
+
+  function renderHandoffState(data) {
+    var btn = $('handoff-btn');
+    var info = $('handoff-info');
     if (data.handedOff) {
-      if (title) title.textContent = 'Handed off — in claimables';
-      if (sub) {
-        var when = data.handoffTimestamp ? new Date(data.handoffTimestamp).toLocaleString() : '';
-        sub.textContent = (data.originalOwnerName ? 'From ' + data.originalOwnerName : '') +
-          (when ? ' · ' + when : '');
-      }
-      if (btn) { btn.classList.add('hidden'); }
+      btn.classList.add('hidden');
+      info.classList.remove('hidden');
+      var when = data.handoffTimestamp ? new Date(data.handoffTimestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      $('handoff-info-text').textContent = 'In the claimables pool' +
+        (data.originalOwnerName ? ' · from ' + data.originalOwnerName : '') + (when ? ' · ' + when : '');
     } else {
-      if (title) title.textContent = 'Not handed off';
-      if (sub) sub.textContent = 'Owner stays with you until someone claims it.';
-      if (btn) { btn.classList.remove('hidden'); }
+      btn.classList.remove('hidden');
+      info.classList.add('hidden');
     }
   }
 
   function handleHandoff() {
     var call = state.selectedCall;
     if (!call) return;
-    var url = CONFIG.api.baseUrl + '/api/handoff';
     showToast('Handing off…');
-    apiPost(url, { eventId: call.id })
+    apiPost(CONFIG.api.baseUrl + '/api/handoff', { eventId: call.id })
       .then(function() {
         showToast('Call handed off', 'success');
-        loadHandoffTab();
+        loadHandoffState();
       })
-      .catch(function(err) {
-        showToast('Failed: ' + err.message, 'error');
+      .catch(function(err) { showToast('Failed: ' + err.message, 'error'); });
+  }
+
+  // ==================== STATUS SHEET ====================
+  function openSheet() {
+    state.sheetOpen = true;
+    $('status-sheet').classList.remove('hidden');
+    focusFirst($('status-sheet'));
+  }
+
+  function closeSheet() {
+    state.sheetOpen = false;
+    $('status-sheet').classList.add('hidden');
+    focusFirst(screens['detail']);
+  }
+
+  function markCall(disposition) {
+    var call = state.selectedCall;
+    if (!call) return;
+    showToast('Saving…');
+    apiPost(CONFIG.api.baseUrl + '/api/mark-call', { oppId: call.oppId, disposition: disposition })
+      .then(function(data) {
+        call.sub = data.newStage;
+        if (state.profile) state.profile.stage = data.newStage;
+        $('profile-stage').textContent = data.newStage;
+        delete state.cache['myday'];
+        delete state.cache['profile_' + call.oppId];
+        closeSheet();
+        showToast('Marked ' + disposition.replace('_', ' '), 'success');
+      })
+      .catch(function(err) { showToast('Failed: ' + err.message, 'error'); });
+  }
+
+  // ==================== DNA TAB ====================
+  function loadDna() {
+    var call = state.selectedCall;
+    var accountId = (state.profile && state.profile.accountId) || (call && call.accountId);
+    var content = $('dna-content'), empty = $('dna-empty'), loading = $('dna-loading');
+    content.classList.add('hidden');
+    empty.classList.add('hidden');
+    if (!accountId) {
+      empty.textContent = 'No account linked to this call.';
+      empty.classList.remove('hidden');
+      loading.classList.add('hidden');
+      return;
+    }
+    loading.classList.remove('hidden');
+    apiGet(CONFIG.api.baseUrl + '/api/dna?accountId=' + encodeURIComponent(accountId), {
+      cacheKey: 'dna_' + accountId, cacheDuration: 30 * 60 * 1000,
+    })
+      .then(function(data) {
+        loading.classList.add('hidden');
+        if (data.error || !(data.categories || []).length) {
+          empty.textContent = data.error || 'No DNA results on file.';
+          empty.classList.remove('hidden');
+          return;
+        }
+        // rows are focusable so the D-pad can walk (and scroll) the list
+        content.innerHTML = data.categories.map(function(c) {
+          var notable = !c.is_average;
+          return '<div class="dna-row focusable' + (notable ? ' notable' : '') + '" tabindex="0">' +
+            '<span class="dna-trait">' + escapeHtml(c.name) + '</span>' +
+            '<span class="dna-result">' + escapeHtml(c.result) + '</span></div>';
+        }).join('');
+        content.classList.remove('hidden');
+        if (state.currentScreen === 'detail' && state.detailTab === 'dna') {
+          restoreFocusTo($('tab-dna'));
+        }
+      })
+      .catch(function() {
+        loading.classList.add('hidden');
+        empty.textContent = 'Could not load DNA results.';
+        empty.classList.remove('hidden');
       });
   }
 
-  // ==================== ACTION HANDLING ====================
+  // ==================== ACTIONS ====================
   function handleAction(action, element) {
     switch (action) {
-      case 'back':
-        navigateBack();
-        break;
+      case 'back': navigateBack(); break;
       case 'refresh':
-        loadMyDay();
+        state.cache = {};
+        if (state.currentScreen === 'home') {
+          if (state.mainTab === 'overview') loadOverview(); else loadMyDay();
+        }
+        showToast('Refreshing…');
         break;
-      case 'tab':
-        switchTab(element.dataset.tab);
-        break;
-      case 'mark-call':
-        markCall(element.dataset.disposition);
-        break;
-      case 'handoff':
-        handleHandoff();
-        break;
+      case 'main-tab': switchMainTab(element.dataset.tab); break;
+      case 'tab': switchDetailTab(element.dataset.tab); break;
       case 'open-call':
-        var call = state.data.walkthroughs[Number(element.dataset.index)];
+        var call = state.walkthroughs[Number(element.dataset.index)];
         if (call) openCallDetail(call);
         break;
-      default:
-        handleAppAction(action, element);
-        break;
+      case 'open-call-by-opp': openCallByOpp(element.dataset.oppId); break;
+      case 'open-goals': openGoals(); break;
+      case 'goal-adjust': adjustGoal(element.dataset.goal, Number(element.dataset.delta)); break;
+      case 'save-goals': saveGoals(); break;
+      case 'open-status': openSheet(); break;
+      case 'close-sheet': closeSheet(); break;
+      case 'mark-call': markCall(element.dataset.disposition); break;
+      case 'handoff': handleHandoff(); break;
     }
-  }
-
-  function handleAppAction(action, element) {
-    console.log('[Action]', action);
   }
 
   function onScreenEnter(screenId) {
     if (screenId === 'home') {
-      loadMyDay();
+      // renders synchronously from preloaded state, then refreshes silently —
+      // guarantees the panel has focusables before focus is placed
+      switchMainTab(state.mainTab);
     } else if (screenId === 'detail') {
       renderDetailHeader();
-      switchTab('status');
+      switchDetailTab('profile');
+      loadProfile();
     }
+    if (screenId !== 'home') stopCountdownTicker();
+    else if (state.mainTab === 'overview') startCountdownTicker();
   }
 
-  // ==================== EVENT LISTENERS ====================
+  // ==================== EVENTS ====================
   function setupEvents() {
     document.addEventListener('click', function(e) {
       var actionEl = e.target.closest('[data-action]');
@@ -466,45 +790,46 @@
     });
 
     document.addEventListener('keydown', function(e) {
+      if (state.currentScreen === 'splash') { e.preventDefault(); return; }
       switch (e.key) {
-        case 'ArrowUp':
-          moveFocus('up');
-          e.preventDefault();
-          break;
-        case 'ArrowDown':
-          moveFocus('down');
-          e.preventDefault();
-          break;
-        case 'ArrowLeft':
-          moveFocus('left');
-          e.preventDefault();
-          break;
-        case 'ArrowRight':
-          moveFocus('right');
-          e.preventDefault();
-          break;
+        case 'ArrowUp':    moveFocus('up');    e.preventDefault(); break;
+        case 'ArrowDown':  moveFocus('down');  e.preventDefault(); break;
+        case 'ArrowLeft':  moveFocus('left');  e.preventDefault(); break;
+        case 'ArrowRight': moveFocus('right'); e.preventDefault(); break;
         case 'Enter':
           if (document.activeElement && document.activeElement.classList.contains('focusable')) {
             document.activeElement.click();
           }
           e.preventDefault();
           break;
-        case 'Escape':
-          navigateBack();
-          e.preventDefault();
-          break;
+        case 'Escape': navigateBack(); e.preventDefault(); break;
       }
     });
   }
 
-  // ==================== INITIALIZATION ====================
+  // ==================== INIT ====================
   function init() {
     collectScreens();
     setupEvents();
 
-    setTimeout(function() {
-      navigateTo('home', { addToHistory: false });
-    }, 100);
+    // Boot: splash plays while data preloads; leave after both settle
+    // (or after the minimum time even if the network is slow to fail).
+    var t0 = Date.now();
+    var preload = Promise.all([
+      apiGet(CONFIG.api.baseUrl + '/api/overview', { cacheKey: 'overview' })
+        .then(function(d) { state.overview = d; })
+        .catch(function() {}),
+      apiGet(CONFIG.api.baseUrl + '/api/myday', { cacheKey: 'myday' })
+        .then(function(d) { state.walkthroughs = d.walkthroughs || []; })
+        .catch(function() {}),
+    ]);
+
+    preload.then(function() {
+      var wait = Math.max(0, CONFIG.splashMinMs - (Date.now() - t0));
+      setTimeout(function() {
+        navigateTo('home', { addToHistory: false });
+      }, wait);
+    });
   }
 
   if (document.readyState === 'loading') {
