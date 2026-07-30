@@ -211,10 +211,11 @@
       return;
     }
 
-    walkthroughs.forEach(function(w) {
-      var row = document.createElement('div');
+    walkthroughs.forEach(function(w, index) {
+      var row = document.createElement('button');
       row.className = 'wt-row focusable';
-      row.tabIndex = 0;
+      row.dataset.action = 'open-call';
+      row.dataset.index = String(index);
       row.innerHTML =
         '<span class="wt-time">' + escapeHtml(w.timeLabel) + '</span>' +
         '<div class="wt-who">' +
@@ -222,7 +223,6 @@
           '<span class="wt-sub">' + escapeHtml(w.sub) + '</span>' +
         '</div>' +
         '<span class="wt-tag ' + tagClass(w.tag) + '">' + escapeHtml(w.tag) + '</span>';
-      row.addEventListener('click', function() { openCallDetail(w); });
       list.appendChild(row);
     });
 
@@ -388,6 +388,10 @@
         break;
       case 'handoff':
         handleHandoff();
+        break;
+      case 'open-call':
+        var call = state.data.walkthroughs[Number(element.dataset.index)];
+        if (call) openCallDetail(call);
         break;
       default:
         handleAppAction(action, element);

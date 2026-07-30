@@ -134,10 +134,13 @@ body {
 .wt-row {
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 12px 14px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   gap: 12px;
+  font-family: inherit;
+  text-align: left;
 }
 .wt-row:focus { background: var(--bg-card); }
 .wt-time {
