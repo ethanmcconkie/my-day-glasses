@@ -62,35 +62,81 @@
     if (el) el.focus();
   }
 
-  function moveFocus(direction) {
-    var container = screens[state.currentScreen];
-    if (!container) return;
-
-    var focusables = Array.from(
+  function getFocusables(container) {
+    return Array.from(
       container.querySelectorAll('.focusable:not([disabled]):not(.hidden)')
     ).filter(function(el) {
       // exclude focusables inside a hidden tab panel
       var panel = el.closest('.tab-panel');
       return !panel || !panel.classList.contains('hidden');
     });
+  }
+
+  // True spatial navigation: each direction only considers elements actually
+  // positioned in that direction on screen (by center point), and picks the
+  // closest one — weighted so it prefers staying aligned on the cross-axis
+  // (e.g. "down" prefers the item directly below, not diagonally adjacent).
+  // Falls back to wrapping to the far edge if nothing exists in that direction.
+  function moveFocus(direction) {
+    var container = screens[state.currentScreen];
+    if (!container) return;
+
+    var focusables = getFocusables(container);
     if (focusables.length === 0) return;
 
     var current = document.activeElement;
-    var idx = focusables.indexOf(current);
-
-    if (idx === -1) {
+    if (!focusables.includes(current)) {
       focusFirst(container);
       return;
     }
 
-    var nextIdx;
-    if (direction === 'up' || direction === 'left') {
-      nextIdx = idx > 0 ? idx - 1 : focusables.length - 1;
-    } else {
-      nextIdx = idx < focusables.length - 1 ? idx + 1 : 0;
+    var cRect = current.getBoundingClientRect();
+    var cx = cRect.left + cRect.width / 2;
+    var cy = cRect.top + cRect.height / 2;
+
+    var candidate = null;
+    var candidateScore = Infinity;
+    var wrapCandidate = null;
+    var wrapScore = -Infinity;
+
+    focusables.forEach(function(el) {
+      if (el === current) return;
+      var r = el.getBoundingClientRect();
+      var ex = r.left + r.width / 2;
+      var ey = r.top + r.height / 2;
+      var dx = ex - cx;
+      var dy = ey - cy;
+
+      var primary, cross, inDirection, oppositeDirection;
+      switch (direction) {
+        case 'up':    primary = -dy; cross = dx; inDirection = dy < -1; oppositeDirection = dy > 1;  break;
+        case 'down':  primary = dy;  cross = dx; inDirection = dy > 1;  oppositeDirection = dy < -1; break;
+        case 'left':  primary = -dx; cross = dy; inDirection = dx < -1; oppositeDirection = dx > 1;  break;
+        case 'right': primary = dx;  cross = dy; inDirection = dx > 1;  oppositeDirection = dx < -1; break;
+      }
+
+      if (inDirection) {
+        // heavily penalize cross-axis drift so it prefers the aligned item
+        var score = primary + Math.abs(cross) * 2;
+        if (score < candidateScore) {
+          candidateScore = score;
+          candidate = el;
+        }
+      } else if (oppositeDirection) {
+        // furthest element in the opposite direction = wrap-around target
+        var wScore = primary - Math.abs(cross) * 2;
+        if (wScore > wrapScore) {
+          wrapScore = wScore;
+          wrapCandidate = el;
+        }
+      }
+    });
+
+    var next = candidate || wrapCandidate;
+    if (next) {
+      next.focus();
+      next.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
-    focusables[nextIdx].focus();
-    focusables[nextIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   // ==================== API LAYER ====================
@@ -190,10 +236,10 @@
   // ==================== MY DAY RENDERING ====================
   function tagClass(tag) {
     var t = (tag || '').toLowerCase();
-    if (t.indexOf('purchased') !== -1) return 'tag-purchased';
-    if (t.indexOf('completed') !== -1) return 'tag-completed';
+    if (t === 'sold') return 'tag-purchased';
+    if (t === 'done') return 'tag-completed';
     if (t.indexOf('no-show') !== -1 || t.indexOf('no show') !== -1) return 'tag-noshow';
-    if (t.indexOf('lost') !== -1) return 'tag-lost';
+    if (t === 'lost' || t === 'refused') return 'tag-lost';
     return '';
   }
 
