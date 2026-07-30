@@ -6,7 +6,7 @@
     appName: 'My Day',
     storageKey: 'mdg_myday',
     api: {
-      baseUrl: 'https://sparc-meant-francis-celebs.trycloudflare.com',
+      baseUrl: 'https://missing-depend-asking-consumption.trycloudflare.com',
       cacheDuration: 60 * 1000, // 1 min — this is a live schedule, keep it fresh
     },
   };
