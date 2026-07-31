@@ -326,8 +326,8 @@ button {
   border: 1px solid var(--border-soft);
   border-left: 3px solid var(--blue);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
-  min-height: 78px;
+  padding: 10px 14px;
+  min-height: 70px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -342,44 +342,16 @@ button {
 .call-card.live .call-timer { color: var(--green); }
 .call-card .call-name { font-size: 13px; color: var(--text-sub); font-weight: 600; }
 
-/* Stat tiles */
-.stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.stat-tile {
-  background: var(--card);
-  border: 1px solid var(--border-soft);
-  border-top: 2px solid var(--purple);
-  border-radius: var(--radius-sm);
-  padding: 10px 10px 8px;
-}
-.stat-tile.accent-blue  { border-top-color: var(--blue); }
-.stat-tile.accent-green { border-top-color: var(--green); }
-.stat-tile.accent-amber { border-top-color: var(--amber); }
-.stat-tile .stat-value {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  margin-top: 3px;
-}
-.stat-tile .stat-sub {
-  font-size: 10px;
-  color: var(--text-sub);
-  margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Goals / deals-closed bars */
 .goal-card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
+
+/* Overview must fit 600px with zero scrolling */
+#panel-overview { padding-bottom: 8px; gap: 8px; }
 .goal-edit-btn {
   font-size: 13px;
   color: var(--text-sub);
@@ -389,7 +361,7 @@ button {
   min-height: 36px;
   font-weight: 600;
 }
-.goal-row { margin-bottom: 10px; }
+.goal-row { margin-bottom: 8px; }
 .goal-row:last-child { margin-bottom: 2px; }
 .goal-row-top {
   display: flex;
@@ -422,16 +394,16 @@ button {
   background: var(--card);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: 12px 8px 10px;
+  padding: 8px 8px 8px;
   text-align: center;
 }
-.ring-wrap { position: relative; width: 96px; height: 96px; margin: 0 auto 6px; }
+.ring-wrap { position: relative; width: 78px; height: 78px; margin: 0 auto 5px; }
 .ring-wrap svg { transform: rotate(-90deg); }
 .ring-pct {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 800;
 }
 .ring-sub { font-size: 10px; color: var(--text-sub); margin-top: 2px; }

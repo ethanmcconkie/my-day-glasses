@@ -297,16 +297,9 @@
         '<div style="font-size:14px;color:var(--text-sub);margin-top:6px">No upcoming calls scheduled.</div></div>';
     }
 
-    // --- Stat tiles ---
+    // --- Goal bars ---
     var d = data.deals || {};
     var today = d.today || {}, month = d.month || {};
-    $('ov-stats').innerHTML =
-      statTile('Calls Today', data.callsToday, 'scheduled', 'accent-blue') +
-      statTile('Walkthroughs', data.walkthroughsToday, 'completed today', '') +
-      statTile('Today Deals', today.count || 0, fmtAmt(today.amount) || 'none closed', 'accent-green') +
-      statTile('Month Deals', month.count || 0, fmtAmt(month.amount) || 'none yet', 'accent-amber');
-
-    // --- Goal bars ---
     var g = data.goals || {};
     var week = d.week || {};
     $('ov-goal-bars').innerHTML =
@@ -343,13 +336,6 @@
     return btn;
   }
 
-  function statTile(label, value, sub, accentClass) {
-    return '<div class="stat-tile ' + accentClass + '">' +
-      '<div class="card-label">' + escapeHtml(label) + '</div>' +
-      '<div class="stat-value">' + escapeHtml(String(value == null ? 0 : value)) + '</div>' +
-      '<div class="stat-sub">' + escapeHtml(sub || '') + '</div></div>';
-  }
-
   function goalBar(label, value, goal, colorClass) {
     var pct;
     if (goal > 0) pct = Math.max(3, Math.min(100, Math.round(value / goal * 100)));
@@ -365,13 +351,13 @@
   }
 
   function ringCard(label, pct, sub, color) {
-    var r = 40, C = 2 * Math.PI * r;
+    var r = 33, C = 2 * Math.PI * r;
     var dash = (C * Math.min(Math.max(pct, 0), 100) / 100).toFixed(1);
     return '<div class="ring-card">' +
       '<div class="ring-wrap">' +
-        '<svg width="96" height="96">' +
-          '<circle cx="48" cy="48" r="' + r + '" fill="none" stroke="var(--border-soft)" stroke-width="7"/>' +
-          '<circle cx="48" cy="48" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="7" ' +
+        '<svg width="78" height="78">' +
+          '<circle cx="39" cy="39" r="' + r + '" fill="none" stroke="var(--border-soft)" stroke-width="6"/>' +
+          '<circle cx="39" cy="39" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="6" ' +
             'stroke-dasharray="' + dash + ' ' + C.toFixed(1) + '" stroke-linecap="round"/>' +
         '</svg>' +
         '<div class="ring-pct">' + pct + '%</div>' +
