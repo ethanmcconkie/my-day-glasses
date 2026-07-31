@@ -2,33 +2,63 @@
    Page background #000 = transparent; UI surfaces are dark navy so they read
    as opaque panels floating over the real world. */
 
+/* Dark theme — the desktop JARVIS palette, tuned for the additive display
+   (page stays #000 so the real world shows through). */
 :root {
   --bg-page: #000000;
-  --surface: #0e0c16;        /* headers, nav, sheets */
-  --card: #16131f;           /* cards */
-  --card-raised: #1d1930;    /* focused / active surfaces */
-  --border: #2a2540;
-  --border-soft: #201c33;
-  --text: #f2f0f7;
-  --text-sub: #a49fb5;
-  --text-muted: #6d6880;
-  --purple: #a78bfa;
-  --purple-soft: rgba(167, 139, 250, 0.16);
+  --surface: #1a1822;        /* headers, nav, sheets */
+  --card: #242130;           /* cards */
+  --card-raised: #2f2c3a;    /* focused / active surfaces */
+  --border: #3d3950;
+  --border-soft: #2a2738;
+  --text: #ede8e0;
+  --text-sub: #a29cb0;
+  --text-muted: #8a8498;
+  --purple: #c4b5d8;
+  --purple-soft: rgba(196, 181, 216, 0.16);
   --blue: #7ec8e3;
   --blue-soft: rgba(126, 200, 227, 0.14);
-  --green: #6ee7a8;
-  --green-soft: rgba(110, 231, 168, 0.14);
+  --green: #9fd5b4;
+  --green-soft: rgba(159, 213, 180, 0.15);
   --amber: #f5c97a;
   --amber-soft: rgba(245, 201, 122, 0.16);
-  --rose: #fb7185;
-  --rose-soft: rgba(251, 113, 133, 0.15);
-  --focus-glow: rgba(167, 139, 250, 0.45);
+  --rose: #f5a3b0;
+  --rose-soft: rgba(245, 163, 176, 0.16);
+  --focus-glow: rgba(196, 181, 216, 0.45);
+  --scrim: rgba(26, 24, 34, 0.9);
+  --backdrop: rgba(4, 3, 8, 0.72);
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 18px;
   --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
   --ease-focus-on: cubic-bezier(0.6, 0, 0.4, 1);
   --ease-color: cubic-bezier(0.4, 0.04, 0.5, 1);
+}
+
+/* Light theme — the desktop JARVIS cream palette. */
+:root.theme-light {
+  --bg-page: #f5f0e8;
+  --surface: #ede8df;
+  --card: #e5e0d6;
+  --card-raised: #dcd6ca;
+  --border: #c8c2b8;
+  --border-soft: #d5cfc5;
+  --text: #1a1818;
+  --text-sub: #706a62;
+  --text-muted: #8f887c;
+  --purple: #6b58a0;
+  --purple-soft: rgba(107, 88, 160, 0.13);
+  --blue: #2a7c9e;
+  --blue-soft: rgba(42, 124, 158, 0.12);
+  --green: #3a8a62;
+  --green-soft: rgba(58, 138, 98, 0.13);
+  --amber: #b06a18;
+  --amber-soft: rgba(176, 106, 24, 0.13);
+  --rose: #a84060;
+  --rose-soft: rgba(168, 64, 96, 0.12);
+  --focus-glow: rgba(107, 88, 160, 0.35);
+  --scrim: rgba(237, 232, 223, 0.9);
+  --backdrop: rgba(80, 72, 60, 0.45);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -296,7 +326,7 @@ button {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 40px;
-  background: linear-gradient(to top, rgba(14, 12, 22, 0.9), transparent);
+  background: linear-gradient(to top, var(--scrim), transparent);
   pointer-events: none;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   z-index: 3;
@@ -599,7 +629,7 @@ button {
 .sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 3, 8, 0.72);
+  background: var(--backdrop);
   display: flex;
   align-items: flex-end;
   padding: 8px;

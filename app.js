@@ -211,6 +211,18 @@
     });
   }
 
+  // ==================== THEME ====================
+  function applyTheme(theme) {
+    document.documentElement.classList.toggle('theme-light', theme === 'light');
+    var btn = $('theme-btn');
+    if (btn) btn.innerHTML = theme === 'light' ? '&#9790;' : '&#9788;'; // moon in light, sun in dark
+    try { localStorage.setItem('jarvis_theme', theme); } catch (e) {}
+  }
+
+  function toggleTheme() {
+    applyTheme(document.documentElement.classList.contains('theme-light') ? 'dark' : 'light');
+  }
+
   // ==================== HELPERS ====================
   function escapeHtml(s) {
     var d = document.createElement('div');
@@ -316,8 +328,8 @@
       : 'not connected';
     var crSub = (cr.completed || 0) + '/' + (cr.total || 0) + ' this month';
     $('ov-rings').innerHTML =
-      ringCard('Monthly Quota', q.pct || 0, quotaSub, '#6ee7a8') +
-      ringCard('Consult Rate', cr.pct || 0, crSub, '#f5c97a');
+      ringCard('Monthly Quota', q.pct || 0, quotaSub, 'var(--green)') +
+      ringCard('Consult Rate', cr.pct || 0, crSub, 'var(--amber)');
 
     startCountdownTicker();
   }
@@ -747,6 +759,7 @@
       case 'open-goals': openGoals(); break;
       case 'goal-adjust': adjustGoal(element.dataset.goal, Number(element.dataset.delta)); break;
       case 'save-goals': saveGoals(); break;
+      case 'toggle-theme': toggleTheme(); break;
       case 'open-status': openSheet(); break;
       case 'close-sheet': closeSheet(); break;
       case 'mark-call': markCall(element.dataset.disposition); break;
@@ -797,6 +810,9 @@
   function init() {
     collectScreens();
     setupEvents();
+    var savedTheme = 'dark';
+    try { savedTheme = localStorage.getItem('jarvis_theme') || 'dark'; } catch (e) {}
+    applyTheme(savedTheme);
 
     // Boot: splash plays while data preloads; leave after both settle
     // (or after the minimum time even if the network is slow to fail).
