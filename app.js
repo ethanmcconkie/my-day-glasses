@@ -17,6 +17,7 @@
     screenHistory: [],
     cache: {},
     walkthroughs: [],
+    schedDate: null, // 'YYYY-MM-DD' shown on the My Day tab; set to today at init
     overview: null,
     mainTab: 'overview',       // 'overview' | 'myday'
     detailTab: 'profile',      // 'profile' | 'dna'
@@ -407,13 +408,43 @@
     return '';
   }
 
+  // --- Day switching (like the desktop Schedule tab) ---
+  function dateStr(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function todayStr() { return dateStr(new Date()); }
+
+  function renderDayLabel() {
+    var el = $('day-label');
+    if (!el) return;
+    var sel = new Date(state.schedDate + 'T12:00:00');
+    var diffDays = Math.round((sel - new Date(todayStr() + 'T12:00:00')) / 86400000);
+    var pretty = sel.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    var rel = diffDays === 0 ? 'Today' : diffDays === 1 ? 'Tomorrow' : diffDays === -1 ? 'Yesterday' : '';
+    el.innerHTML = escapeHtml(rel || pretty) +
+      (rel ? '<span class="day-sub">' + escapeHtml(pretty) + '</span>' : '');
+  }
+
+  function shiftDay(delta) {
+    var d = new Date(state.schedDate + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    state.schedDate = dateStr(d);
+    renderDayLabel();
+    loadMyDay();
+  }
+
   function loadMyDay(silent) {
     if (!silent) {
       $('md-loading').classList.remove('hidden');
       $('myday-list').classList.add('hidden');
       $('md-error').classList.add('hidden');
     }
-    return apiGet(CONFIG.api.baseUrl + '/api/myday', { cacheKey: 'myday' })
+    var day = state.schedDate || todayStr();
+    var url = CONFIG.api.baseUrl + '/api/myday' + (day !== todayStr() ? '?date=' + day : '');
+    return apiGet(url, { cacheKey: 'myday_' + day })
       .then(function(data) {
         state.walkthroughs = data.walkthroughs || [];
         renderMyDay(state.walkthroughs);
@@ -434,7 +465,7 @@
     var list = $('myday-list');
     list.innerHTML = '';
     if (!walkthroughs || walkthroughs.length === 0) {
-      list.innerHTML = '<div class="empty-message">No calls scheduled today.</div>';
+      list.innerHTML = '<div class="empty-message">No calls scheduled.</div>';
       return;
     }
     walkthroughs.forEach(function(w, index) {
@@ -529,15 +560,19 @@
     navigateTo('detail');
   }
 
-  function openCallByOpp(oppId) {
+  function openCallByOpp(oppId, iso) {
     var match = state.walkthroughs.filter(function(w) { return w.oppId === oppId; })[0];
     if (match) { openCallDetail(match); return; }
-    // next call may be beyond today — load what we can from the schedule
-    loadMyDay(true).then(function() {
-      var m = state.walkthroughs.filter(function(w) { return w.oppId === oppId; })[0];
-      if (m) openCallDetail(m);
-      else showToast('Not on today’s schedule');
-    });
+    // the call may be on a different day than the schedule tab is showing
+    var day = iso ? dateStr(new Date(iso)) : todayStr();
+    var url = CONFIG.api.baseUrl + '/api/myday' + (day !== todayStr() ? '?date=' + day : '');
+    apiGet(url, { cacheKey: 'myday_' + day })
+      .then(function(data) {
+        var m = (data.walkthroughs || []).filter(function(w) { return w.oppId === oppId; })[0];
+        if (m) openCallDetail(m);
+        else showToast('Not on the schedule');
+      })
+      .catch(function() { showToast('Could not load that call', 'error'); });
   }
 
   function switchDetailTab(tabName) {
@@ -687,7 +722,9 @@
         call.sub = data.newStage;
         if (state.profile) state.profile.stage = data.newStage;
         $('profile-stage').textContent = data.newStage;
-        delete state.cache['myday'];
+        Object.keys(state.cache).forEach(function(k) {
+          if (k.indexOf('myday_') === 0) delete state.cache[k];
+        });
         delete state.cache['profile_' + call.oppId];
         closeSheet();
         showToast('Marked ' + disposition.replace('_', ' '), 'success');
@@ -755,7 +792,9 @@
         var call = state.walkthroughs[Number(element.dataset.index)];
         if (call) openCallDetail(call);
         break;
-      case 'open-call-by-opp': openCallByOpp(element.dataset.oppId); break;
+      case 'open-call-by-opp': openCallByOpp(element.dataset.oppId, element.dataset.iso); break;
+      case 'day-prev': shiftDay(-1); break;
+      case 'day-next': shiftDay(1); break;
       case 'open-goals': openGoals(); break;
       case 'goal-adjust': adjustGoal(element.dataset.goal, Number(element.dataset.delta)); break;
       case 'save-goals': saveGoals(); break;
@@ -813,6 +852,8 @@
     var savedTheme = 'dark';
     try { savedTheme = localStorage.getItem('jarvis_theme') || 'dark'; } catch (e) {}
     applyTheme(savedTheme);
+    state.schedDate = todayStr();
+    renderDayLabel();
 
     // Boot: splash plays while data preloads; leave after both settle
     // (or after the minimum time even if the network is slow to fail).
@@ -821,7 +862,7 @@
       apiGet(CONFIG.api.baseUrl + '/api/overview', { cacheKey: 'overview' })
         .then(function(d) { state.overview = d; })
         .catch(function() {}),
-      apiGet(CONFIG.api.baseUrl + '/api/myday', { cacheKey: 'myday' })
+      apiGet(CONFIG.api.baseUrl + '/api/myday', { cacheKey: 'myday_' + todayStr() })
         .then(function(d) { state.walkthroughs = d.walkthroughs || []; })
         .catch(function() {}),
     ]);
