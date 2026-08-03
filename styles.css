@@ -311,7 +311,7 @@ button {
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 2px 32px;
+  padding: 12px 10px 32px;
   display: flex;
   flex-direction: column;
   gap: 10px;
