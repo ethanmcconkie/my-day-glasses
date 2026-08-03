@@ -5,7 +5,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://parents-flat-gis-finance.trycloudflare.com',
+      baseUrl: 'https://polymer-quiet-lay-there.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
