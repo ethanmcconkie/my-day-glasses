@@ -8,7 +8,7 @@
   <title>JARVIS</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <div id="app">
@@ -161,7 +161,7 @@
             <div class="demo-grid" id="profile-demo" style="margin-top:2px"></div>
             <div class="action-row" style="margin-top:4px">
               <button class="action-big primary focusable" data-action="open-status">&#9998; Status</button>
-              <button class="action-big danger focusable" id="handoff-btn" data-action="handoff">&#10132; Hand Off</button>
+              <button class="action-big danger focusable" id="handoff-btn" data-action="open-handoff-confirm">&#10132; Hand Off</button>
             </div>
             <div class="card hidden" id="handoff-info">
               <span class="card-label">Handoff</span>
@@ -191,9 +191,19 @@
           <button class="sheet-btn focusable" data-action="close-sheet"><span class="s-dot d-muted"></span>Cancel</button>
         </div>
       </div>
+
+      <!-- Handoff confirmation overlay -->
+      <div id="handoff-confirm-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Hand Off This Call?</div>
+          <div class="sheet-sub">Moves it to the claimables pool for another rep to pick up.</div>
+          <button class="sheet-btn focusable s-rose" data-action="confirm-handoff"><span class="s-dot d-rose"></span>Hand It Off</button>
+          <button class="sheet-btn focusable" data-action="close-sheet"><span class="s-dot d-muted"></span>Cancel</button>
+        </div>
+      </div>
     </div>
 
   </div>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

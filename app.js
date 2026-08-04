@@ -25,7 +25,7 @@
     profile: null,
     goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
     countdownTimer: null,
-    sheetOpen: false,
+    openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | null
   };
 
   var screens = {};
@@ -61,7 +61,7 @@
   }
 
   function navigateBack() {
-    if (state.sheetOpen) { closeSheet(); return; }
+    if (state.openSheetId) { closeSheet(); return; }
     if (state.screenHistory.length > 0) {
       navigateTo(state.screenHistory.pop(), { addToHistory: false });
     }
@@ -73,8 +73,8 @@
       container.querySelectorAll('.focusable:not([disabled])')
     ).filter(function(el) {
       if (el.closest('.hidden')) return false;
-      // when the status sheet is open, trap focus inside it
-      if (state.sheetOpen) return !!el.closest('.sheet-backdrop');
+      // when a sheet is open, trap focus inside that specific sheet
+      if (state.openSheetId) return !!el.closest('#' + state.openSheetId);
       if (el.closest('.sheet-backdrop')) return false;
       return true;
     });
@@ -165,7 +165,7 @@
       if (direction === 'right' && state.mainTab === 'overview') { switchMainTab('myday'); return true; }
     }
     // Detail screen: left/right page between Overview and DNA
-    if (state.currentScreen === 'detail' && !state.sheetOpen) {
+    if (state.currentScreen === 'detail' && !state.openSheetId) {
       if (direction === 'left' && state.detailTab === 'dna') { switchDetailTab('profile'); return true; }
       if (direction === 'right' && state.detailTab === 'profile') { switchDetailTab('dna'); return true; }
     }
@@ -292,9 +292,31 @@
     return m <= 0 ? 'LIVE' : 'LIVE · ' + m + 'm';
   }
 
-  function renderOverview(data) {
+  function clockLabel() {
+    return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function nextCallHeaderLabel() {
+    var data = state.overview;
+    if (!data) return '';
+    if (data.currentCall) return 'Live now';
+    if (data.nextCall) return 'Next · ' + countdownLabel(data.nextCall.iso);
+    return 'No calls left today';
+  }
+
+  // Header clock + next-call countdown — always visible on the home screen,
+  // independent of which main tab (Overview/My Day) is active.
+  function renderHeaderMeta() {
     var meta = $('home-meta');
-    if (meta) meta.textContent = data.date || '';
+    if (!meta) return;
+    var next = nextCallHeaderLabel();
+    meta.innerHTML =
+      '<div class="hdr-time">' + escapeHtml(clockLabel()) + '</div>' +
+      (next ? '<div class="hdr-next">' + escapeHtml(next) + '</div>' : '');
+  }
+
+  function renderOverview(data) {
+    renderHeaderMeta();
 
     // --- Current / Next call cards ---
     var calls = $('ov-calls');
@@ -380,18 +402,23 @@
     '</div>';
   }
 
-  // Tick the call timers once a minute — only while the overview is visible.
+  // Ticks the header clock/next-call countdown whenever the home screen is
+  // showing (either tab), plus the Overview call-card timers when that tab
+  // is the one visible.
   function startCountdownTicker() {
     stopCountdownTicker();
+    renderHeaderMeta(); // paint immediately, don't wait for the first tick
     state.countdownTimer = setInterval(function() {
-      if (state.currentScreen !== 'home' || state.mainTab !== 'overview') return;
+      if (state.currentScreen !== 'home') return;
+      renderHeaderMeta();
+      if (state.mainTab !== 'overview') return;
       document.querySelectorAll('.call-card').forEach(function(el) {
         var iso = el.dataset.iso;
         if (!iso) return;
         var timerEl = el.querySelector('.call-timer');
         if (timerEl) timerEl.textContent = el.dataset.live ? liveLabel(iso) : countdownLabel(iso);
       });
-    }, 30000);
+    }, 15000);
   }
 
   function stopCountdownTicker() {
@@ -695,21 +722,23 @@
     apiPost(CONFIG.api.baseUrl + '/api/handoff', { eventId: call.id })
       .then(function() {
         showToast('Call handed off', 'success');
+        closeSheet();
         loadHandoffState();
       })
       .catch(function(err) { showToast('Failed: ' + err.message, 'error'); });
   }
 
-  // ==================== STATUS SHEET ====================
-  function openSheet() {
-    state.sheetOpen = true;
-    $('status-sheet').classList.remove('hidden');
-    focusFirst($('status-sheet'));
+  // ==================== SHEETS (status + handoff confirm) ====================
+  function openSheet(sheetId) {
+    state.openSheetId = sheetId;
+    $(sheetId).classList.remove('hidden');
+    focusFirst($(sheetId));
   }
 
   function closeSheet() {
-    state.sheetOpen = false;
-    $('status-sheet').classList.add('hidden');
+    if (!state.openSheetId) return;
+    $(state.openSheetId).classList.add('hidden');
+    state.openSheetId = null;
     focusFirst(screens['detail']);
   }
 
@@ -799,10 +828,11 @@
       case 'goal-adjust': adjustGoal(element.dataset.goal, Number(element.dataset.delta)); break;
       case 'save-goals': saveGoals(); break;
       case 'toggle-theme': toggleTheme(); break;
-      case 'open-status': openSheet(); break;
+      case 'open-status': openSheet('status-sheet'); break;
       case 'close-sheet': closeSheet(); break;
       case 'mark-call': markCall(element.dataset.disposition); break;
-      case 'handoff': handleHandoff(); break;
+      case 'open-handoff-confirm': openSheet('handoff-confirm-sheet'); break;
+      case 'confirm-handoff': handleHandoff(); break;
     }
   }
 
@@ -817,7 +847,7 @@
       loadProfile();
     }
     if (screenId !== 'home') stopCountdownTicker();
-    else if (state.mainTab === 'overview') startCountdownTicker();
+    else startCountdownTicker();
   }
 
   // ==================== EVENTS ====================
