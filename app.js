@@ -5,7 +5,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://polymer-quiet-lay-there.trycloudflare.com',
+      baseUrl: 'https://protection-rpm-syndication-missouri.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
