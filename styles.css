@@ -610,7 +610,8 @@ button {
   text-align: right;
 }
 
-/* DNA rows */
+/* DNA rows — kept compact enough that a full result set (up to ~10 traits)
+   fits in the tab without scrolling. */
 .dna-row {
   display: flex;
   justify-content: space-between;
@@ -620,12 +621,16 @@ button {
   border: 1px solid var(--border-soft);
   border-left: 3px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 11px 14px;
+  padding: 8px 12px;
 }
 .dna-row.notable { border-left-color: var(--amber); }
-.dna-trait { font-size: 13px; color: var(--text-sub); }
-.dna-result { font-size: 13px; font-weight: 500; color: var(--text-sub); white-space: nowrap; }
+.dna-trait { font-size: 12.5px; line-height: 1.15; color: var(--text-sub); }
+.dna-result { font-size: 12.5px; line-height: 1.15; font-weight: 500; color: var(--text-sub); white-space: nowrap; }
 .dna-row.notable .dna-result { color: var(--amber); font-weight: 700; }
+
+/* Tighter list gap and tab padding, scoped to DNA only */
+#dna-content { gap: 5px; }
+#tab-dna.content { padding: 8px 10px 12px; }
 
 /* ==================== Goals editor ==================== */
 .goal-edit-row {

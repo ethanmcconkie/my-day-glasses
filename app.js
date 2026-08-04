@@ -402,14 +402,17 @@
     '</div>';
   }
 
-  // Ticks the header clock/next-call countdown whenever the home screen is
-  // showing (either tab), plus the Overview call-card timers when that tab
-  // is the one visible.
+  // Ticks the header clock every 15s wherever it's shown — home (both tabs)
+  // and the detail/profile screen — plus the Overview call-card timers when
+  // that tab is the one visible.
   function startCountdownTicker() {
     stopCountdownTicker();
-    renderHeaderMeta(); // paint immediately, don't wait for the first tick
-    state.countdownTimer = setInterval(function() {
-      if (state.currentScreen !== 'home') return;
+    tickClocks(); // paint immediately, don't wait for the first tick
+    state.countdownTimer = setInterval(tickClocks, 15000);
+  }
+
+  function tickClocks() {
+    if (state.currentScreen === 'home') {
       renderHeaderMeta();
       if (state.mainTab !== 'overview') return;
       document.querySelectorAll('.call-card').forEach(function(el) {
@@ -418,7 +421,9 @@
         var timerEl = el.querySelector('.call-timer');
         if (timerEl) timerEl.textContent = el.dataset.live ? liveLabel(iso) : countdownLabel(iso);
       });
-    }, 15000);
+    } else if (state.currentScreen === 'detail') {
+      renderDetailMeta();
+    }
   }
 
   function stopCountdownTicker() {
@@ -616,10 +621,21 @@
     else focusFirst(screens['detail']);
   }
 
+  // Same two-line clock widget as the home header, second line is this
+  // call's own scheduled time instead of a next-call countdown.
+  function renderDetailMeta() {
+    var meta = $('detail-time');
+    if (!meta) return;
+    var call = state.selectedCall || {};
+    meta.innerHTML =
+      '<div class="hdr-time">' + escapeHtml(clockLabel()) + '</div>' +
+      (call.timeLabel ? '<div class="hdr-next">' + escapeHtml(call.timeLabel) + '</div>' : '');
+  }
+
   function renderDetailHeader() {
     var call = state.selectedCall || {};
     $('detail-name').textContent = call.name || 'Prospect';
-    $('detail-time').textContent = call.timeLabel || '';
+    renderDetailMeta();
     $('detail-badges').innerHTML = '';
   }
 
@@ -846,8 +862,8 @@
       switchDetailTab('profile');
       loadProfile();
     }
-    if (screenId !== 'home') stopCountdownTicker();
-    else startCountdownTicker();
+    if (screenId === 'home' || screenId === 'detail') startCountdownTicker();
+    else stopCountdownTicker();
   }
 
   // ==================== EVENTS ====================
