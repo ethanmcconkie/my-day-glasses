@@ -5,7 +5,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://accepts-winston-mistress-winner.trycloudflare.com',
+      baseUrl: 'https://tremendous-julia-asthma-tries.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
