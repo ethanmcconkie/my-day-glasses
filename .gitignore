@@ -1,4 +1,6 @@
 ﻿_http_stdout.log
 _http_stderr.log
+_static_tunnel_stdout.log
+_static_tunnel_stderr.log
 .vercel/
 node_modules/
