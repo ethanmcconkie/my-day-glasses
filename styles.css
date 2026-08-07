@@ -632,6 +632,18 @@ button {
 #dna-content { gap: 5px; }
 #tab-dna.content { padding: 8px 10px 12px; }
 
+/* ==================== Brief tab (JARVIS precall briefing) ==================== */
+#tab-brief.content { padding: 10px 10px 32px; }
+#brief-content {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  outline: none;
+}
+#brief-content strong { color: var(--purple); font-weight: 700; }
+#brief-content .brief-bullet { display: block; margin: 2px 0 2px 4px; color: var(--text-sub); }
+
 /* ==================== Goals editor ==================== */
 .goal-edit-row {
   display: flex;

@@ -146,6 +146,7 @@
       <div class="tab-bar">
         <button class="tab-item focusable active" data-action="tab" data-tab="profile">Overview</button>
         <button class="tab-item focusable" data-action="tab" data-tab="dna">DNA</button>
+        <button class="tab-item focusable" data-action="tab" data-tab="brief">Brief</button>
       </div>
 
       <div class="content-wrap">
@@ -178,6 +179,15 @@
           <div id="dna-content" class="list-container hidden"></div>
           <div id="dna-empty" class="empty-message hidden"></div>
         </div>
+
+        <div id="tab-brief" class="content tab-panel hidden">
+          <div id="brief-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">JARVIS is prepping your brief&hellip;</div>
+          </div>
+          <div id="brief-content" class="hidden focusable" tabindex="0"></div>
+          <div id="brief-empty" class="empty-message hidden"></div>
+        </div>
       </div>
 
       <!-- Status sheet overlay -->
@@ -204,6 +214,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

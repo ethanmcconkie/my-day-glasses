@@ -20,9 +20,10 @@
     schedDate: null, // 'YYYY-MM-DD' shown on the My Day tab; set to today at init
     overview: null,
     mainTab: 'overview',       // 'overview' | 'myday'
-    detailTab: 'profile',      // 'profile' | 'dna'
+    detailTab: 'profile',      // 'profile' | 'dna' | 'brief'
     selectedCall: null,
     profile: null,
+    briefs: {}, // oppId -> reply text, cached for the session so re-opening a tab is instant
     goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
     countdownTimer: null,
     openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | null
@@ -164,10 +165,12 @@
       if (direction === 'left' && state.mainTab === 'myday') { switchMainTab('overview'); return true; }
       if (direction === 'right' && state.mainTab === 'overview') { switchMainTab('myday'); return true; }
     }
-    // Detail screen: left/right page between Overview and DNA
+    // Detail screen: left/right page through Overview -> DNA -> Brief
     if (state.currentScreen === 'detail' && !state.openSheetId) {
-      if (direction === 'left' && state.detailTab === 'dna') { switchDetailTab('profile'); return true; }
-      if (direction === 'right' && state.detailTab === 'profile') { switchDetailTab('dna'); return true; }
+      var order = ['profile', 'dna', 'brief'];
+      var idx = order.indexOf(state.detailTab);
+      if (direction === 'right' && idx < order.length - 1) { switchDetailTab(order[idx + 1]); return true; }
+      if (direction === 'left' && idx > 0) { switchDetailTab(order[idx - 1]); return true; }
     }
 
     if (wrapCandidate && (direction === 'up' || direction === 'down')) {
@@ -619,8 +622,11 @@
     });
     $('tab-profile').classList.toggle('hidden', tabName !== 'profile');
     $('tab-dna').classList.toggle('hidden', tabName !== 'dna');
+    $('tab-brief').classList.toggle('hidden', tabName !== 'brief');
     if (tabName === 'dna') loadDna();
-    var panel = tabName === 'profile' ? $('tab-profile') : $('tab-dna');
+    if (tabName === 'brief') loadBrief();
+    var panelMap = { profile: 'tab-profile', dna: 'tab-dna', brief: 'tab-brief' };
+    var panel = $(panelMap[tabName]);
     var els = visibleFocusables(panel);
     if (els.length) els[0].focus();
     else focusFirst(screens['detail']);
@@ -821,6 +827,56 @@
       .catch(function() {
         loading.classList.add('hidden');
         empty.textContent = 'Could not load DNA results.';
+        empty.classList.remove('hidden');
+      });
+  }
+
+  // ==================== BRIEF TAB (JARVIS precall briefing) ====================
+  // Lightweight markdown-lite: escape first (safe), then re-introduce **bold**
+  // and leading "- " bullets. Newlines survive as-is under white-space:pre-wrap.
+  function renderBriefText(text) {
+    var escaped = escapeHtml(text);
+    escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/^- (.+)$/gm, '<span class="brief-bullet">&bull; $1</span>');
+    return escaped;
+  }
+
+  function loadBrief() {
+    var call = state.selectedCall;
+    if (!call) return;
+    var content = $('brief-content'), empty = $('brief-empty'), loading = $('brief-loading');
+    content.classList.add('hidden');
+    empty.classList.add('hidden');
+
+    var cached = state.briefs[call.oppId];
+    if (cached) {
+      loading.classList.add('hidden');
+      content.innerHTML = renderBriefText(cached);
+      content.classList.remove('hidden');
+      return;
+    }
+
+    loading.classList.remove('hidden');
+    apiPost(CONFIG.api.baseUrl + '/api/assistant', {
+      text: 'Give me a precall briefing on ' + call.name + ' for my call today.',
+    })
+      .then(function(data) {
+        loading.classList.add('hidden');
+        if (!data.reply) {
+          empty.textContent = 'No briefing available.';
+          empty.classList.remove('hidden');
+          return;
+        }
+        state.briefs[call.oppId] = data.reply;
+        content.innerHTML = renderBriefText(data.reply);
+        content.classList.remove('hidden');
+        if (state.currentScreen === 'detail' && state.detailTab === 'brief') {
+          restoreFocusTo($('tab-brief'));
+        }
+      })
+      .catch(function() {
+        loading.classList.add('hidden');
+        empty.textContent = 'Could not reach JARVIS for a briefing.';
         empty.classList.remove('hidden');
       });
   }
