@@ -19,7 +19,7 @@
     walkthroughs: [],
     schedDate: null, // 'YYYY-MM-DD' shown on the My Day tab; set to today at init
     overview: null,
-    mainTab: 'overview',       // 'overview' | 'myday' | 'ask'
+    mainTab: 'overview',       // 'overview' | 'myday'
     detailTab: 'profile',      // 'profile' | 'dna' | 'brief'
     selectedCall: null,
     profile: null,
@@ -167,12 +167,10 @@
       return true;
     }
 
-    // Edge of the home panels: left/right pages through Overview -> My Day -> Ask
+    // Edge of the home panels: left/right pages between Overview and My Day
     if (state.currentScreen === 'home') {
-      var mainOrder = ['overview', 'myday', 'ask'];
-      var mainIdx = mainOrder.indexOf(state.mainTab);
-      if (direction === 'right' && mainIdx < mainOrder.length - 1) { switchMainTab(mainOrder[mainIdx + 1]); return true; }
-      if (direction === 'left' && mainIdx > 0) { switchMainTab(mainOrder[mainIdx - 1]); return true; }
+      if (direction === 'left' && state.mainTab === 'myday') { switchMainTab('overview'); return true; }
+      if (direction === 'right' && state.mainTab === 'overview') { switchMainTab('myday'); return true; }
     }
     // Detail screen: left/right page through Overview -> DNA -> Brief
     if (state.currentScreen === 'detail' && !state.openSheetId) {
@@ -225,15 +223,11 @@
   }
 
   // ==================== THEME ====================
+  // No user-facing toggle anymore (replaced by the Ask JARVIS button) — this
+  // just re-applies whatever was last saved, or dark by default.
   function applyTheme(theme) {
     document.documentElement.classList.toggle('theme-light', theme === 'light');
-    var btn = $('theme-btn');
-    if (btn) btn.innerHTML = theme === 'light' ? '&#9790;' : '&#9788;'; // moon in light, sun in dark
     try { localStorage.setItem('jarvis_theme', theme); } catch (e) {}
-  }
-
-  function toggleTheme() {
-    applyTheme(document.documentElement.classList.contains('theme-light') ? 'dark' : 'light');
   }
 
   // ==================== HELPERS ====================
@@ -541,7 +535,6 @@
     });
     $('panel-overview').classList.toggle('hidden', tabName !== 'overview');
     $('panel-myday').classList.toggle('hidden', tabName !== 'myday');
-    $('panel-ask').classList.toggle('hidden', tabName !== 'ask');
 
     // Render immediately from whatever we already have so focus has somewhere
     // to land, then refresh silently in the background.
@@ -552,19 +545,16 @@
         $('ov-content').classList.remove('hidden');
       }
       loadOverview(true);
-    } else if (tabName === 'myday') {
+    } else {
       if (state.walkthroughs.length) {
         renderMyDay(state.walkthroughs);
         $('md-loading').classList.add('hidden');
         $('myday-list').classList.remove('hidden');
       }
       loadMyDay(true);
-    } else if (tabName === 'ask') {
-      initAskTab();
     }
 
-    var panelMap = { overview: 'panel-overview', myday: 'panel-myday', ask: 'panel-ask' };
-    var panel = $(panelMap[tabName]);
+    var panel = tabName === 'overview' ? $('panel-overview') : $('panel-myday');
     var els = visibleFocusables(panel);
     if (els.length) els[0].focus();
     else focusFirst(screens['home']);
@@ -1002,7 +992,7 @@
     $('ask-transcript').textContent = '“' + transcript + '”';
     $('ask-reply').innerHTML = renderBriefText(reply || '(no reply)');
     $('ask-result').classList.remove('hidden');
-    restoreFocusTo($('panel-ask'));
+    restoreFocusTo(screens['ask']);
   }
 
   // ==================== ACTIONS ====================
@@ -1019,6 +1009,7 @@
         break;
       case 'main-tab': switchMainTab(element.dataset.tab); break;
       case 'tab': switchDetailTab(element.dataset.tab); break;
+      case 'open-ask': navigateTo('ask'); break;
       case 'ask-mic-toggle': toggleAskMic(); break;
       case 'ask-quick': sendQuickQuestion(element.dataset.question); break;
       case 'open-call':
@@ -1049,6 +1040,8 @@
       renderDetailHeader();
       switchDetailTab('profile');
       loadProfile();
+    } else if (screenId === 'ask') {
+      initAskTab();
     }
     if (screenId === 'home' || screenId === 'detail') startCountdownTicker();
     else stopCountdownTicker();

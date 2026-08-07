@@ -272,8 +272,12 @@ button {
   font-size: 16px;
   min-height: 44px;
   min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .icon-btn:focus { color: var(--text); background: var(--card-raised); }
+.helmet-icon { display: block; }
 
 .back-btn {
   font-size: 20px;
