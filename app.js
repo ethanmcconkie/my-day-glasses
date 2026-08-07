@@ -947,8 +947,10 @@
         recorder.start();
         setAskStatus('listening');
       })
-      .catch(function() {
-        showToast('Microphone unavailable', 'error');
+      .catch(function(err) {
+        console.error('[JARVIS] getUserMedia failed:', err && err.name, err && err.message);
+        var why = (err && err.name) ? ' (' + err.name + ')' : '';
+        showToast('Microphone unavailable' + why, 'error');
         state.ask.micSupported = false;
         $('ask-mic-btn').classList.add('hidden');
         $('ask-mic-unsupported').classList.remove('hidden');
