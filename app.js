@@ -468,15 +468,20 @@
     loadMyDay();
   }
 
-  function loadMyDay(silent) {
+  function loadMyDay(silent, force) {
     if (!silent) {
       $('md-loading').classList.remove('hidden');
       $('myday-list').classList.add('hidden');
       $('md-error').classList.add('hidden');
     }
     var day = state.schedDate || todayStr();
-    var url = CONFIG.api.baseUrl + '/api/myday' + (day !== todayStr() ? '?date=' + day : '');
-    return apiGet(url, { cacheKey: 'myday_' + day })
+    var params = [];
+    if (day !== todayStr()) params.push('date=' + day);
+    // force=1 tells the API to re-sync before answering, so a call claimed
+    // seconds ago shows up on the first tap instead of waiting out the cache
+    if (force) params.push('refresh=1');
+    var url = CONFIG.api.baseUrl + '/api/myday' + (params.length ? '?' + params.join('&') : '');
+    return apiGet(url, { cacheKey: 'myday_' + day, noCache: !!force })
       .then(function(data) {
         state.walkthroughs = data.walkthroughs || [];
         renderMyDay(state.walkthroughs);
@@ -827,7 +832,7 @@
       case 'refresh':
         state.cache = {};
         if (state.currentScreen === 'home') {
-          if (state.mainTab === 'overview') loadOverview(); else loadMyDay();
+          if (state.mainTab === 'overview') loadOverview(); else loadMyDay(false, true);
         }
         showToast('Refreshing…');
         break;
