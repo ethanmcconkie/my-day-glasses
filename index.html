@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=600, height=600, initial-scale=1.0, user-scalable=no">
   <meta name="description" content="JARVIS — AlterMe sales intelligence on your glasses. Schedule, goals, quota, and prospect DNA.">
   <meta name="mrbd-web-app-capable" content="yes">
+  <!-- Best-effort: stop the shell document itself from being cached, so a
+       version bump on app.js/styles.css below is actually seen on next
+       load rather than requiring a hard-refresh the glasses may have no
+       affordance for. GitHub Pages' own Cache-Control header still wins
+       for any HTTP-level cache in front of the browser — this only helps
+       the browser's own document cache. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>JARVIS</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -260,6 +269,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

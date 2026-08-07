@@ -1,6 +1,11 @@
 (function() {
   'use strict';
 
+  // Bump on every deploy that touches diagnostics — lets a build be
+  // confirmed as "actually running" from the device itself, with no
+  // devtools/console access needed (e.g. shown in an error toast).
+  var BUILD = 'v15';
+
   // ==================== CONFIG ====================
   var CONFIG = {
     appName: 'JARVIS',
@@ -257,7 +262,10 @@
     toast.offsetHeight; // reflow so the transition re-triggers
     toast.classList.add('visible');
     clearTimeout(toast._t);
-    toast._t = setTimeout(function() { toast.classList.remove('visible'); }, 2500);
+    // Errors get longer on screen — no way to pause/hover to re-read them
+    // on the glasses, and diagnostic text runs longer than normal toasts.
+    var duration = type === 'error' ? 8000 : 2500;
+    toast._t = setTimeout(function() { toast.classList.remove('visible'); }, duration);
   }
 
   // ==================== OVERVIEW TAB ====================
@@ -948,11 +956,15 @@
         setAskStatus('listening');
       })
       .catch(function(err) {
-        console.error('[JARVIS] getUserMedia failed:', err && err.name, err && err.message);
-        var why = (err && err.name) ? ' (' + err.name + ')' : '';
-        showToast('Microphone unavailable' + why, 'error');
+        console.error('[JARVIS] getUserMedia failed:', err);
+        var detail = 'unknown';
+        try {
+          detail = (err && (err.name || err.message)) || String(err);
+        } catch (e) {}
+        showToast('Mic unavailable: ' + detail + ' [' + BUILD + ']', 'error');
         state.ask.micSupported = false;
         $('ask-mic-btn').classList.add('hidden');
+        $('ask-mic-unsupported').textContent = 'Voice unavailable (' + detail + ', ' + BUILD + ') — use a question below.';
         $('ask-mic-unsupported').classList.remove('hidden');
       });
   }
