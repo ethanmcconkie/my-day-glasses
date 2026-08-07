@@ -115,14 +115,22 @@
       </header>
       <div class="content">
         <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
-          <span id="ask-mic-icon">&#127908;</span>
-          <span id="ask-mic-label">Tap to Talk</span>
+          <svg class="ask-mic-icon ask-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M6 11a6 6 0 0 0 12 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <svg class="ask-mic-icon ask-icon-stop" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>
+          </svg>
+          <span id="ask-mic-label">Engage Voice Link</span>
         </button>
         <div id="ask-mic-unsupported" class="empty-message hidden" style="padding:4px 0 10px">
-          Voice isn&rsquo;t available here &mdash; use a question below.
+          No voice link on this hardware &mdash; select a query below.
         </div>
 
-        <div class="ask-quick-label">Quick questions</div>
+        <div class="ask-quick-label">Suggested Queries</div>
         <div class="list-container" id="ask-quick-list">
           <button class="wt-row focusable" data-action="ask-quick" data-question="What's on my schedule today?">
             <span class="wt-who"><span class="wt-name">What&rsquo;s on my schedule today?</span></span>
@@ -269,6 +277,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

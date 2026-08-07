@@ -823,31 +823,56 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  font-size: 15px;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   margin-bottom: 6px;
+  transition: background 0.3s var(--ease-color), color 0.3s var(--ease-color), box-shadow 0.3s var(--ease-color);
 }
 .ask-mic-btn:focus { border-color: var(--purple); box-shadow: 0 0 22px rgba(168,85,247,0.35); }
-.ask-mic-btn #ask-mic-icon { font-size: 26px; }
-.ask-mic-btn.listening { background: var(--rose-soft); color: var(--rose); }
-.ask-mic-btn.thinking { opacity: 0.7; }
+.ask-mic-icon { width: 26px; height: 26px; }
+.ask-mic-btn .ask-icon-stop { display: none; }
+.ask-mic-btn.listening .ask-icon-mic { display: none; }
+.ask-mic-btn.listening .ask-icon-stop { display: block; }
+/* Cyan "live signal" — distinct from rose, which this app reserves for
+   errors/danger elsewhere (handoff, toasts). Listening isn't an error. */
+.ask-mic-btn.listening {
+  background: var(--blue-soft);
+  color: var(--blue);
+  box-shadow: 0 0 24px rgba(126,200,227,0.4);
+}
+.ask-mic-btn.thinking { opacity: 0.65; }
 
 .ask-quick-label {
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-sub);
   margin: 4px 2px 2px;
+  font-family: var(--mono);
 }
 
+.ask-readout-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
 .ask-transcript {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  margin-bottom: 8px;
+}
+.ask-transcript .ask-readout-label { color: var(--blue); }
+.ask-transcript-text {
   font-size: 12.5px;
   color: var(--text-sub);
-  font-style: italic;
-  margin-bottom: 8px;
-  padding: 0 2px;
 }
 #ask-reply {
   font-size: 13.5px;
@@ -858,7 +883,9 @@ button {
   padding: 12px;
   border-radius: var(--radius-md);
   background: var(--card);
+  border-left: 3px solid var(--purple);
 }
+#ask-reply .ask-readout-label { color: var(--purple); }
 #ask-reply strong { color: var(--purple); font-weight: 700; }
 #ask-reply .brief-bullet { display: block; margin: 2px 0 2px 4px; color: var(--text-sub); }
 .toast.success { border-color: var(--green); }

@@ -4,7 +4,7 @@
   // Bump on every deploy that touches diagnostics — lets a build be
   // confirmed as "actually running" from the device itself, with no
   // devtools/console access needed (e.g. shown in an error toast).
-  var BUILD = 'v16';
+  var BUILD = 'v17';
 
   // ==================== CONFIG ====================
   var CONFIG = {
@@ -908,7 +908,7 @@
     if (!apiPresent) {
       state.ask.micSupported = false;
       $('ask-mic-btn').classList.add('hidden');
-      $('ask-mic-unsupported').textContent = 'Voice isn’t available here — use a question below.';
+      $('ask-mic-unsupported').textContent = 'No voice link on this hardware — select a query below.';
       $('ask-mic-unsupported').classList.remove('hidden');
       return;
     }
@@ -925,7 +925,7 @@
         state.ask.micSupported = hasMic;
         $('ask-mic-btn').classList.toggle('hidden', !hasMic);
         if (!hasMic) {
-          $('ask-mic-unsupported').textContent = 'No microphone detected on this device [' + BUILD + '] — use a question below.';
+          $('ask-mic-unsupported').textContent = 'No mic detected on this device [' + BUILD + '] — select a query below.';
         }
         $('ask-mic-unsupported').classList.toggle('hidden', hasMic);
       })
@@ -943,10 +943,10 @@
     var btn = $('ask-mic-btn');
     btn.classList.toggle('listening', status === 'listening');
     btn.classList.toggle('thinking', status === 'thinking');
-    $('ask-mic-icon').textContent = status === 'listening' ? '■' : '\u{1F3A4}';
+    // Icon swap (mic <-> stop) is pure CSS, keyed off the .listening class.
     $('ask-mic-label').textContent =
-      status === 'listening' ? 'Tap to Stop' :
-      status === 'thinking'  ? 'Thinking…' : 'Tap to Talk';
+      status === 'listening' ? 'Listening — Tap to End' :
+      status === 'thinking'  ? 'Processing Query…' : 'Engage Voice Link';
     document.querySelectorAll('#ask-quick-list .focusable').forEach(function(el) {
       el.disabled = status === 'thinking';
     });
@@ -1032,8 +1032,12 @@
 
   function presentAskResult(transcript, reply) {
     setAskStatus('idle');
-    $('ask-transcript').textContent = '“' + transcript + '”';
-    $('ask-reply').innerHTML = renderBriefText(reply || '(no reply)');
+    $('ask-transcript').innerHTML =
+      '<div class="ask-readout-label">You Asked</div>' +
+      '<div class="ask-transcript-text">' + escapeHtml(transcript) + '</div>';
+    $('ask-reply').innerHTML =
+      '<div class="ask-readout-label">JARVIS</div>' +
+      renderBriefText(reply || '(no reply)');
     $('ask-result').classList.remove('hidden');
     restoreFocusTo(screens['ask']);
   }
