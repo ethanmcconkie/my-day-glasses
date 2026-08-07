@@ -4,7 +4,7 @@
   // Bump on every deploy that touches diagnostics — lets a build be
   // confirmed as "actually running" from the device itself, with no
   // devtools/console access needed (e.g. shown in an error toast).
-  var BUILD = 'v15';
+  var BUILD = 'v16';
 
   // ==================== CONFIG ====================
   var CONFIG = {
@@ -900,13 +900,42 @@
   function initAskTab() {
     if (state.ask.micChecked) return;
     state.ask.micChecked = true;
-    state.ask.micSupported = !!(
+    var apiPresent = !!(
       navigator.mediaDevices &&
       navigator.mediaDevices.getUserMedia &&
       window.MediaRecorder
     );
-    $('ask-mic-btn').classList.toggle('hidden', !state.ask.micSupported);
-    $('ask-mic-unsupported').classList.toggle('hidden', state.ask.micSupported);
+    if (!apiPresent) {
+      state.ask.micSupported = false;
+      $('ask-mic-btn').classList.add('hidden');
+      $('ask-mic-unsupported').textContent = 'Voice isn’t available here — use a question below.';
+      $('ask-mic-unsupported').classList.remove('hidden');
+      return;
+    }
+    // API exists doesn't mean a mic exists — confirmed on-device: this
+    // WebView can expose getUserMedia/MediaRecorder yet report zero
+    // audioinput devices (NotFoundError on actual capture). Check for a
+    // real device before ever showing the button, instead of only finding
+    // out after a failed tap. enumerateDevices() reports device *kind*
+    // without needing permission first, even though labels stay blank
+    // until permission is granted.
+    navigator.mediaDevices.enumerateDevices()
+      .then(function(devices) {
+        var hasMic = devices.some(function(d) { return d.kind === 'audioinput'; });
+        state.ask.micSupported = hasMic;
+        $('ask-mic-btn').classList.toggle('hidden', !hasMic);
+        if (!hasMic) {
+          $('ask-mic-unsupported').textContent = 'No microphone detected on this device [' + BUILD + '] — use a question below.';
+        }
+        $('ask-mic-unsupported').classList.toggle('hidden', hasMic);
+      })
+      .catch(function() {
+        // enumerateDevices itself can fail on some WebViews — fall back to
+        // showing the button and letting the real getUserMedia catch handle it.
+        state.ask.micSupported = true;
+        $('ask-mic-btn').classList.remove('hidden');
+        $('ask-mic-unsupported').classList.add('hidden');
+      });
   }
 
   function setAskStatus(status) {
