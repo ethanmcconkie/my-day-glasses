@@ -8,7 +8,7 @@
   <title>JARVIS</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
   <div id="app">
@@ -42,6 +42,7 @@
       <div class="tab-bar" id="main-tabs">
         <button class="tab-item focusable active" data-action="main-tab" data-tab="overview">Overview</button>
         <button class="tab-item focusable" data-action="main-tab" data-tab="myday">My Day</button>
+        <button class="tab-item focusable" data-action="main-tab" data-tab="ask">Ask</button>
       </div>
 
       <div class="content-wrap">
@@ -86,6 +87,38 @@
             <button class="retry-btn focusable" data-action="refresh">Retry</button>
           </div>
           <div id="myday-list" class="list-container hidden"></div>
+        </div>
+
+        <!-- Ask JARVIS panel -->
+        <div id="panel-ask" class="content main-panel hidden">
+          <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
+            <span id="ask-mic-icon">&#127908;</span>
+            <span id="ask-mic-label">Tap to Talk</span>
+          </button>
+          <div id="ask-mic-unsupported" class="empty-message hidden" style="padding:4px 0 10px">
+            Voice isn&rsquo;t available here &mdash; use a question below.
+          </div>
+
+          <div class="ask-quick-label">Quick questions</div>
+          <div class="list-container" id="ask-quick-list">
+            <button class="wt-row focusable" data-action="ask-quick" data-question="What's on my schedule today?">
+              <span class="wt-who"><span class="wt-name">What&rsquo;s on my schedule today?</span></span>
+            </button>
+            <button class="wt-row focusable" data-action="ask-quick" data-question="Brief me on my next call.">
+              <span class="wt-who"><span class="wt-name">Brief me on my next call</span></span>
+            </button>
+            <button class="wt-row focusable" data-action="ask-quick" data-question="Who are my HOT leads right now?">
+              <span class="wt-who"><span class="wt-name">Who are my HOT leads?</span></span>
+            </button>
+            <button class="wt-row focusable" data-action="ask-quick" data-question="Any pipeline updates or replies I should know about today?">
+              <span class="wt-who"><span class="wt-name">Any updates I should know about?</span></span>
+            </button>
+          </div>
+
+          <div id="ask-result" class="hidden">
+            <div class="ask-transcript" id="ask-transcript"></div>
+            <div id="ask-reply" class="focusable" tabindex="0"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -214,6 +247,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

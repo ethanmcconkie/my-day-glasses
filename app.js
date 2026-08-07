@@ -19,11 +19,18 @@
     walkthroughs: [],
     schedDate: null, // 'YYYY-MM-DD' shown on the My Day tab; set to today at init
     overview: null,
-    mainTab: 'overview',       // 'overview' | 'myday'
+    mainTab: 'overview',       // 'overview' | 'myday' | 'ask'
     detailTab: 'profile',      // 'profile' | 'dna' | 'brief'
     selectedCall: null,
     profile: null,
     briefs: {}, // oppId -> reply text, cached for the session so re-opening a tab is instant
+    ask: {
+      recorder: null,
+      chunks: [],
+      status: 'idle', // 'idle' | 'listening' | 'thinking'
+      micChecked: false,
+      micSupported: false,
+    },
     goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
     countdownTimer: null,
     openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | null
@@ -160,10 +167,12 @@
       return true;
     }
 
-    // Edge of the home panels: left/right pages between Overview and My Day
+    // Edge of the home panels: left/right pages through Overview -> My Day -> Ask
     if (state.currentScreen === 'home') {
-      if (direction === 'left' && state.mainTab === 'myday') { switchMainTab('overview'); return true; }
-      if (direction === 'right' && state.mainTab === 'overview') { switchMainTab('myday'); return true; }
+      var mainOrder = ['overview', 'myday', 'ask'];
+      var mainIdx = mainOrder.indexOf(state.mainTab);
+      if (direction === 'right' && mainIdx < mainOrder.length - 1) { switchMainTab(mainOrder[mainIdx + 1]); return true; }
+      if (direction === 'left' && mainIdx > 0) { switchMainTab(mainOrder[mainIdx - 1]); return true; }
     }
     // Detail screen: left/right page through Overview -> DNA -> Brief
     if (state.currentScreen === 'detail' && !state.openSheetId) {
@@ -532,6 +541,7 @@
     });
     $('panel-overview').classList.toggle('hidden', tabName !== 'overview');
     $('panel-myday').classList.toggle('hidden', tabName !== 'myday');
+    $('panel-ask').classList.toggle('hidden', tabName !== 'ask');
 
     // Render immediately from whatever we already have so focus has somewhere
     // to land, then refresh silently in the background.
@@ -542,16 +552,19 @@
         $('ov-content').classList.remove('hidden');
       }
       loadOverview(true);
-    } else {
+    } else if (tabName === 'myday') {
       if (state.walkthroughs.length) {
         renderMyDay(state.walkthroughs);
         $('md-loading').classList.add('hidden');
         $('myday-list').classList.remove('hidden');
       }
       loadMyDay(true);
+    } else if (tabName === 'ask') {
+      initAskTab();
     }
 
-    var panel = tabName === 'overview' ? $('panel-overview') : $('panel-myday');
+    var panelMap = { overview: 'panel-overview', myday: 'panel-myday', ask: 'panel-ask' };
+    var panel = $(panelMap[tabName]);
     var els = visibleFocusables(panel);
     if (els.length) els[0].focus();
     else focusFirst(screens['home']);
@@ -881,6 +894,117 @@
       });
   }
 
+  // ==================== ASK JARVIS (voice + quick questions) ====================
+  // Mic support is unverified on the glasses' own browser — this is checked
+  // with plain feature detection (no permission prompt) so the tab still
+  // works via the quick-question list even where getUserMedia doesn't exist
+  // or is blocked.
+  function initAskTab() {
+    if (state.ask.micChecked) return;
+    state.ask.micChecked = true;
+    state.ask.micSupported = !!(
+      navigator.mediaDevices &&
+      navigator.mediaDevices.getUserMedia &&
+      window.MediaRecorder
+    );
+    $('ask-mic-btn').classList.toggle('hidden', !state.ask.micSupported);
+    $('ask-mic-unsupported').classList.toggle('hidden', state.ask.micSupported);
+  }
+
+  function setAskStatus(status) {
+    state.ask.status = status;
+    var btn = $('ask-mic-btn');
+    btn.classList.toggle('listening', status === 'listening');
+    btn.classList.toggle('thinking', status === 'thinking');
+    $('ask-mic-icon').textContent = status === 'listening' ? '■' : '\u{1F3A4}';
+    $('ask-mic-label').textContent =
+      status === 'listening' ? 'Tap to Stop' :
+      status === 'thinking'  ? 'Thinking…' : 'Tap to Talk';
+    document.querySelectorAll('#ask-quick-list .focusable').forEach(function(el) {
+      el.disabled = status === 'thinking';
+    });
+  }
+
+  function toggleAskMic() {
+    if (state.ask.status === 'listening') {
+      stopAskRecording();
+    } else if (state.ask.status === 'idle') {
+      startAskRecording();
+    }
+  }
+
+  function _mimeToFormat(mime) {
+    if (!mime) return 'webm';
+    if (mime.indexOf('mp4') !== -1) return 'mp4';
+    if (mime.indexOf('ogg') !== -1) return 'ogg';
+    return 'webm';
+  }
+
+  function startAskRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function(stream) {
+        var chunks = [];
+        var recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = function(e) { if (e.data.size) chunks.push(e.data); };
+        recorder.onstop = function() {
+          stream.getTracks().forEach(function(t) { t.stop(); });
+          var mime = recorder.mimeType || 'audio/webm';
+          var blob = new Blob(chunks, { type: mime });
+          sendAskAudio(blob, _mimeToFormat(mime));
+        };
+        state.ask.recorder = recorder;
+        state.ask.chunks = chunks;
+        recorder.start();
+        setAskStatus('listening');
+      })
+      .catch(function() {
+        showToast('Microphone unavailable', 'error');
+        state.ask.micSupported = false;
+        $('ask-mic-btn').classList.add('hidden');
+        $('ask-mic-unsupported').classList.remove('hidden');
+      });
+  }
+
+  function stopAskRecording() {
+    if (state.ask.recorder && state.ask.recorder.state !== 'inactive') {
+      setAskStatus('thinking');
+      state.ask.recorder.stop();
+    }
+  }
+
+  function sendAskAudio(blob, format) {
+    var reader = new FileReader();
+    reader.onloadend = function() {
+      var base64 = String(reader.result).split(',')[1] || '';
+      apiPost(CONFIG.api.baseUrl + '/api/assistant', { audio_base64: base64, audio_format: format })
+        .then(function(data) { presentAskResult(data.transcript || '(no speech detected)', data.reply); })
+        .catch(function() {
+          setAskStatus('idle');
+          showToast('Could not reach JARVIS', 'error');
+        });
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  function sendQuickQuestion(question) {
+    if (state.ask.status === 'thinking') return;
+    setAskStatus('thinking');
+    apiPost(CONFIG.api.baseUrl + '/api/assistant', { text: question })
+      .then(function(data) { presentAskResult(question, data.reply); })
+      .catch(function() {
+        setAskStatus('idle');
+        showToast('Could not reach JARVIS', 'error');
+      });
+  }
+
+  function presentAskResult(transcript, reply) {
+    setAskStatus('idle');
+    $('ask-transcript').textContent = '“' + transcript + '”';
+    $('ask-reply').innerHTML = renderBriefText(reply || '(no reply)');
+    $('ask-result').classList.remove('hidden');
+    restoreFocusTo($('panel-ask'));
+  }
+
   // ==================== ACTIONS ====================
   function handleAction(action, element) {
     switch (action) {
@@ -888,12 +1012,15 @@
       case 'refresh':
         state.cache = {};
         if (state.currentScreen === 'home') {
-          if (state.mainTab === 'overview') loadOverview(); else loadMyDay(false, true);
+          if (state.mainTab === 'overview') loadOverview();
+          else if (state.mainTab === 'myday') loadMyDay(false, true);
         }
         showToast('Refreshing…');
         break;
       case 'main-tab': switchMainTab(element.dataset.tab); break;
       case 'tab': switchDetailTab(element.dataset.tab); break;
+      case 'ask-mic-toggle': toggleAskMic(); break;
+      case 'ask-quick': sendQuickQuestion(element.dataset.question); break;
       case 'open-call':
         var call = state.walkthroughs[Number(element.dataset.index)];
         if (call) openCallDetail(call);
