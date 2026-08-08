@@ -17,7 +17,7 @@
   <title>JARVIS</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
   <div id="app">
@@ -151,6 +151,17 @@
           <div id="ask-reply" class="focusable" tabindex="0"></div>
         </div>
       </div>
+
+      <!-- Pending-action confirmation overlay — nothing JARVIS proposes
+           (texts, etc.) sends without an explicit Yes here. -->
+      <div id="ask-confirm-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Confirm Before Sending</div>
+          <div class="sheet-preview" id="ask-confirm-preview"></div>
+          <button class="sheet-btn focusable s-green" data-action="confirm-pending-action"><span class="s-dot d-green"></span>Yes, Send It</button>
+          <button class="sheet-btn focusable s-rose" data-action="cancel-pending-action"><span class="s-dot d-rose"></span>No, Discard</button>
+        </div>
+      </div>
     </div>
 
     <!-- ============ Goals editor ============ -->
@@ -277,6 +288,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

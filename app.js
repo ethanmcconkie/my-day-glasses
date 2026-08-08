@@ -4,7 +4,7 @@
   // Bump on every deploy that touches diagnostics — lets a build be
   // confirmed as "actually running" from the device itself, with no
   // devtools/console access needed (e.g. shown in an error toast).
-  var BUILD = 'v17';
+  var BUILD = 'v18';
 
   // ==================== CONFIG ====================
   var CONFIG = {
@@ -38,7 +38,8 @@
     },
     goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
     countdownTimer: null,
-    openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | null
+    openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | 'ask-confirm-sheet' | null
+    pendingAction: null, // {type, summary, params} awaiting a Yes/No from ask-confirm-sheet
   };
 
   var screens = {};
@@ -777,7 +778,7 @@
     if (!state.openSheetId) return;
     $(state.openSheetId).classList.add('hidden');
     state.openSheetId = null;
-    focusFirst(screens['detail']);
+    focusFirst(screens[state.currentScreen]);
   }
 
   function markCall(disposition) {
@@ -1010,7 +1011,7 @@
     reader.onloadend = function() {
       var base64 = String(reader.result).split(',')[1] || '';
       apiPost(CONFIG.api.baseUrl + '/api/assistant', { audio_base64: base64, audio_format: format })
-        .then(function(data) { presentAskResult(data.transcript || '(no speech detected)', data.reply); })
+        .then(function(data) { presentAskResult(data.transcript || '(no speech detected)', data.reply, data.pending_action); })
         .catch(function() {
           setAskStatus('idle');
           showToast('Could not reach JARVIS', 'error');
@@ -1023,14 +1024,14 @@
     if (state.ask.status === 'thinking') return;
     setAskStatus('thinking');
     apiPost(CONFIG.api.baseUrl + '/api/assistant', { text: question })
-      .then(function(data) { presentAskResult(question, data.reply); })
+      .then(function(data) { presentAskResult(question, data.reply, data.pending_action); })
       .catch(function() {
         setAskStatus('idle');
         showToast('Could not reach JARVIS', 'error');
       });
   }
 
-  function presentAskResult(transcript, reply) {
+  function presentAskResult(transcript, reply, pendingAction) {
     setAskStatus('idle');
     $('ask-transcript').innerHTML =
       '<div class="ask-readout-label">You Asked</div>' +
@@ -1039,7 +1040,45 @@
       '<div class="ask-readout-label">JARVIS</div>' +
       renderBriefText(reply || '(no reply)');
     $('ask-result').classList.remove('hidden');
-    restoreFocusTo(screens['ask']);
+
+    if (pendingAction) {
+      openPendingActionConfirm(pendingAction);
+    } else {
+      restoreFocusTo(screens['ask']);
+    }
+  }
+
+  // ==================== PENDING-ACTION CONFIRMATION ====================
+  // Nothing JARVIS proposes (currently: text messages) sends without this —
+  // see main.py's propose_text_message / confirm_action for the backend half.
+  function openPendingActionConfirm(pendingAction) {
+    state.pendingAction = pendingAction;
+    var to = (pendingAction.params && pendingAction.params.to) || '';
+    var message = (pendingAction.params && pendingAction.params.message) || '';
+    $('ask-confirm-preview').innerHTML =
+      '<span class="preview-to">To ' + escapeHtml(to) + '</span>' +
+      escapeHtml(message);
+    openSheet('ask-confirm-sheet');
+  }
+
+  function confirmPendingAction() {
+    var action = state.pendingAction;
+    if (!action) { closeSheet(); return; }
+    closeSheet();
+    showToast('Sending…');
+    apiPost(CONFIG.api.baseUrl + '/api/confirm-action', { type: action.type, params: action.params })
+      .then(function() {
+        state.pendingAction = null;
+        showToast('Sent', 'success');
+      })
+      .catch(function(err) {
+        showToast('Failed to send: ' + err.message, 'error');
+      });
+  }
+
+  function cancelPendingAction() {
+    state.pendingAction = null;
+    closeSheet();
   }
 
   // ==================== ACTIONS ====================
@@ -1059,6 +1098,8 @@
       case 'open-ask': navigateTo('ask'); break;
       case 'ask-mic-toggle': toggleAskMic(); break;
       case 'ask-quick': sendQuickQuestion(element.dataset.question); break;
+      case 'confirm-pending-action': confirmPendingAction(); break;
+      case 'cancel-pending-action': cancelPendingAction(); break;
       case 'open-call':
         var call = state.walkthroughs[Number(element.dataset.index)];
         if (call) openCallDetail(call);
