@@ -124,82 +124,11 @@ button {
   justify-content: center;
   gap: 0;
 }
-.splash-rings {
-  position: relative;
-  width: 190px;
-  height: 190px;
+.splash-gif {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
   margin-bottom: 26px;
-}
-.splash-rings > div {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-}
-.ring-outer {
-  width: 186px; height: 186px;
-  border: 1px dashed var(--blue);
-  opacity: 0.35;
-  animation: ring-cw 22s linear infinite;
-}
-.ring-arc {
-  width: 150px; height: 150px;
-  border: 2px solid var(--blue);
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-  opacity: 0.8;
-  animation: ring-ccw 9s linear infinite;
-}
-.ring-conic {
-  width: 116px; height: 116px;
-  background: conic-gradient(from 0deg, transparent 270deg, rgba(126,200,227,0.2) 310deg, rgba(126,200,227,0.5) 360deg);
-  animation: ring-cw 4s linear infinite;
-}
-.ring-purple {
-  width: 88px; height: 88px;
-  border: 2.5px solid var(--purple);
-  border-top-color: transparent;
-  border-bottom-color: transparent;
-  opacity: 0.9;
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
-  animation: ring-ccw 5.5s linear infinite;
-}
-.ring-pulse {
-  width: 60px; height: 60px;
-  border: 1.5px solid var(--blue);
-  animation: ring-glow 2.5s ease-in-out infinite;
-  transform: translate(-50%, -50%);
-}
-.splash-logo {
-  width: 60px; height: 60px;
-  background-color: var(--purple);
-  -webkit-mask-image: url('jarvis-logo.png');
-  mask-image: url('jarvis-logo.png');
-  -webkit-mask-size: contain; mask-size: contain;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  -webkit-mask-position: center; mask-position: center;
-  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.55));
-  transform: translate(-50%, -50%);
-  border-radius: 0 !important;
-}
-@keyframes ring-cw {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
-@keyframes ring-ccw {
-  from { transform: translate(-50%, -50%) rotate(360deg); }
-  to   { transform: translate(-50%, -50%) rotate(0deg); }
-}
-@keyframes ring-glow {
-  0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.94); }
-  50%      { opacity: 0.75; transform: translate(-50%, -50%) scale(1.05); }
-}
-.splash-title {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: 8px;
-  color: var(--blue);
-  text-indent: 8px; /* visually recenters letterspaced text */
 }
 .splash-brand {
   margin-top: 8px;
