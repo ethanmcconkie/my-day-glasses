@@ -21,6 +21,10 @@
   <link rel="icon" href="icon-96.png" sizes="96x96">
   <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
   <link rel="manifest" href="manifest.json">
+  <!-- Fetch the splash animation in parallel with CSS/JS instead of only
+       discovering it once styles.css is parsed — shrinks the gap between
+       the OS's native icon splash and this page's own animation starting. -->
+  <link rel="preload" href="splash-sprite-alpha.png?v=1" as="image">
   <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
