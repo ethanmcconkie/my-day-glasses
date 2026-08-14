@@ -1,0 +1,12 @@
+{
+  "name": "JARVIS",
+  "short_name": "JARVIS",
+  "description": "AlterMe sales intelligence on your glasses",
+  "icons": [
+    { "src": "https://ethanmcconkie.github.io/my-day-glasses/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "start_url": "https://ethanmcconkie.github.io/my-day-glasses/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000"
+}
