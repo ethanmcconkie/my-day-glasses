@@ -128,14 +128,14 @@ button {
   width: 220px;
   height: 220px;
   margin-bottom: 26px;
-  background-image: url('splash-sprite.png?v=1');
+  background-image: url('splash-sprite-alpha.png?v=1');
   background-repeat: no-repeat;
-  background-size: 2640px 220px;
-  animation: splash-play 4s steps(12) infinite;
+  background-size: 7920px 220px;
+  animation: splash-play 3s steps(36) infinite;
 }
 @keyframes splash-play {
   from { background-position: 0 0; }
-  to   { background-position: -2640px 0; }
+  to   { background-position: -7920px 0; }
 }
 .splash-brand {
   margin-top: 8px;
