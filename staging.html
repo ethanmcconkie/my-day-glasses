@@ -18,11 +18,20 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?v=15">
-  <!-- Staging-only override: production styles.css has the PNG sprite-sheet
-       splash rule; this page tests a <video> splash instead without
-       touching the shared stylesheet. -->
+  <!-- Staging-only override: production styles.css has the 12-frame PNG
+       sprite splash rule; this page tests a 36-frame transparent sprite
+       (background removed via alpha) without touching the shared stylesheet. -->
   <style>
-    .splash-frames { object-fit: contain; background: none; animation: none; }
+    .splash-frames {
+      background-image: url('splash-sprite-alpha.png?v=1');
+      background-repeat: no-repeat;
+      background-size: 7920px 220px;
+      animation: splash-play-alpha 3s steps(36) infinite;
+    }
+    @keyframes splash-play-alpha {
+      from { background-position: 0 0; }
+      to   { background-position: -7920px 0; }
+    }
   </style>
 </head>
 <body>
@@ -30,7 +39,7 @@
 
     <!-- ============ Splash ============ -->
     <div id="splash" class="screen">
-      <video class="splash-frames" src="splash.mp4?v=1" autoplay muted loop playsinline preload="auto" aria-label="JARVIS"></video>
+      <div class="splash-frames" role="img" aria-label="JARVIS"></div>
       <div class="splash-brand">AlterMe</div>
       <div class="splash-sys">Intelligence System</div>
     </div>
