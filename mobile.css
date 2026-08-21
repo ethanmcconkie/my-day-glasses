@@ -41,3 +41,15 @@ html, body {
 .content, .content-wrap {
   -webkit-overflow-scrolling: touch;
 }
+
+/* Screens with a small, fixed amount of content (not a scrolling list) were
+   sized for the glasses' 600x600 canvas and just strand at the top of a tall
+   phone screen, leaving a dead gap below. Center them instead, the same
+   treatment the Goals editor already uses inline. Lists (My Day, DNA, Brief)
+   are left top-aligned so they scroll normally instead of jumping around as
+   they load. */
+#panel-overview.content,
+#ask > .content,
+#tab-profile.content {
+  justify-content: center;
+}
