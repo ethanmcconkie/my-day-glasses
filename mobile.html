@@ -49,6 +49,47 @@
   </script>
 </head>
 <body>
+  <!-- Temporary on-device diagnostic readout — remove once the full-screen
+       bug is actually found. Desktop Chrome testing hasn't reproduced
+       whatever's happening on real iOS, so surface the real numbers instead
+       of guessing further. -->
+  <div id="debug-readout" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(255,0,0,0.85);color:#fff;font:10px/1.4 monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:none;"></div>
+  <script>
+    (function() {
+      function fmt() {
+        var vv = window.visualViewport;
+        var app = document.getElementById('app');
+        var appRect = app ? app.getBoundingClientRect() : null;
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden;';
+        document.body.appendChild(probe);
+        var cs = getComputedStyle(probe);
+        var safeTop = cs.paddingTop, safeBottom = cs.paddingBottom;
+        document.body.removeChild(probe);
+        return [
+          'standalone=' + (window.navigator.standalone),
+          'innerW/H=' + window.innerWidth + '/' + window.innerHeight,
+          'vv W/H=' + (vv ? vv.width + '/' + vv.height : 'n/a'),
+          'docClientW/H=' + document.documentElement.clientWidth + '/' + document.documentElement.clientHeight,
+          'screenW/H=' + window.screen.width + '/' + window.screen.height,
+          'appRect=' + (appRect ? Math.round(appRect.width) + '/' + Math.round(appRect.height) + ' @' + Math.round(appRect.top) + ',' + Math.round(appRect.left) : 'n/a'),
+          'safeTop/Bottom=' + safeTop + '/' + safeBottom,
+          'dpr=' + window.devicePixelRatio,
+        ].join('  |  ');
+      }
+      function update() {
+        var el = document.getElementById('debug-readout');
+        if (el) el.textContent = fmt();
+      }
+      update();
+      window.addEventListener('resize', update);
+      window.addEventListener('orientationchange', update);
+      window.addEventListener('pageshow', update);
+      setTimeout(update, 300);
+      setTimeout(update, 1000);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', update);
+    })();
+  </script>
   <div id="app">
 
     <!-- ============ Splash ============ -->
