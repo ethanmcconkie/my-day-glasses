@@ -58,9 +58,19 @@ body {
 
 /* The glasses build turns off native scroll bounce implicitly (fixed 600x600,
    overflow hidden on the shell); on a phone, allow the natural rubber-band
-   scroll inside panels for a native feel. */
+   scroll inside panels for a native feel. overscroll-behavior keeps that
+   bounce from overshooting past the real content at the end of a fling. */
 .content, .content-wrap {
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Trim the bottom padding scrollable lists carry on mobile — reported as a
+   large empty gap below the last card. */
+#panel-myday.content,
+#tab-dna.content,
+#tab-brief.content {
+  padding-bottom: 12px;
 }
 
 /* Screens with a small, fixed amount of content (not a scrolling list) were
