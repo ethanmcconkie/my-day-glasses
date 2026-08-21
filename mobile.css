@@ -43,12 +43,13 @@ body {
   display: none;
 }
 
-/* Respect the iPhone notch / home indicator instead of drawing under them. */
+/* Respect the iPhone notch / home indicator instead of drawing under them —
+   only the actual safe-area inset, no extra reserved minimum on top of it. */
 .screen {
-  padding-top: max(8px, env(safe-area-inset-top));
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
-  padding-left: max(8px, env(safe-area-inset-left));
-  padding-right: max(8px, env(safe-area-inset-right));
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Touch has no hover/focus-ring concept the way D-pad focus does — drop the
@@ -72,12 +73,12 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Trim the bottom padding scrollable lists carry on mobile — reported as a
-   large empty gap below the last card. */
+/* Drop the bottom padding scrollable lists carry on mobile entirely — the
+   last card sits right above the safe-area inset now, no reserved gap. */
 #panel-myday.content,
 #tab-dna.content,
 #tab-brief.content {
-  padding-bottom: 12px;
+  padding-bottom: 0;
 }
 
 /* Screens with a small, fixed amount of content (not a scrolling list) were
