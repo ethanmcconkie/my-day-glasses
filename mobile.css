@@ -18,8 +18,16 @@ body {
 }
 
 /* Phone screens aren't see-through like the glasses' additive display, so a
-   flat black background reads as a normal dark-mode app rather than a void. */
-#app { background: var(--bg-page); }
+   flat black background reads as a normal dark-mode app rather than a void.
+   Pinning #app itself to the viewport with position:fixed (rather than
+   depending on body's height being calculated correctly, which is the whole
+   dvh/visualViewport saga above) ties it directly to the real screen bounds
+   in standalone iOS mode, regardless of what body's own box measures. */
+#app {
+  background: var(--bg-page);
+  position: fixed;
+  inset: 0;
+}
 
 /* Drop the glasses build's bottom scroll-fade shadow — a subtle "more below"
    cue on the small 600x600 display, but an odd dark smear at the bottom of a
