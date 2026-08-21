@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="JARVIS — AlterMe sales intelligence. Schedule, goals, quota, and prospect DNA.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="JARVIS">
+  <meta property="og:image" content="https://ethanmcconkie.github.io/my-day-glasses/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <!-- Best-effort: stop the shell document itself from being cached, so a
+       version bump on app.js/styles.css below is actually seen on next
+       load rather than requiring a hard-refresh. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>JARVIS</title>
+  <link rel="icon" href="icon-96.png" sizes="96x96">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="manifest-mobile.json">
+  <!-- Fetch the splash animation in parallel with CSS/JS instead of only
+       discovering it once styles.css is parsed — shrinks the gap between
+       the OS's native icon splash and this page's own animation starting. -->
+  <link rel="preload" href="splash-sprite-alpha.png?v=1" as="image">
+  <!-- Same shared stylesheet as the glasses build, plus mobile-only overrides
+       (viewport sizing, safe-area insets, touch feedback) layered on top. -->
+  <link rel="stylesheet" href="styles.css?v=16">
+  <link rel="stylesheet" href="mobile.css?v=1">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ Splash ============ -->
+    <div id="splash" class="screen">
+      <div class="splash-frames" role="img" aria-label="JARVIS"></div>
+      <div class="splash-brand">AlterMe</div>
+      <div class="splash-sys">Intelligence System</div>
+    </div>
+
+    <!-- ============ Home: Overview | My Day ============ -->
+    <div id="home" class="screen hidden">
+      <header class="header">
+        <div class="header-logo"></div>
+        <span class="header-word">JARVIS</span>
+        <span class="header-fill"></span>
+        <span class="header-meta" id="home-meta"></span>
+        <button class="icon-btn focusable" data-action="open-ask" aria-label="Ask JARVIS">
+          <svg class="helmet-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path fill="currentColor" d="M12 2C8.1 2 5 4.3 5 8c0 1.5.5 2.5.5 3.8L4.4 13c-.3.5 0 1.1.7 1.1h1.2c.4 1.7 1.4 3 2.4 4 .7.7.5 1.3.5 1.8 0 .8.8 1.5 1.9 1.5h2c1.1 0 1.9-.7 1.9-1.5 0-.5-.2-1.1.5-1.8 1-1 2-2.3 2.4-4h1.2c.7 0 1-.6.7-1.1L18.5 11.8c0-1.3.5-2.3.5-3.8 0-3.7-3.1-6-7-6z"/>
+            <path fill="var(--surface)" d="M8.3 9.3 11 8.7v2.9l-2.4.6c-.5-.7-.4-1.6-.3-2.9z"/>
+            <path fill="var(--surface)" d="M15.7 9.3 13 8.7v2.9l2.4.6c.5-.7.4-1.6.3-2.9z"/>
+            <rect fill="var(--surface)" x="11.5" y="8.8" width="1" height="6.4"/>
+          </svg>
+        </button>
+        <button class="icon-btn focusable" data-action="refresh" aria-label="Refresh">&#8635;</button>
+      </header>
+
+      <div class="tab-bar" id="main-tabs">
+        <button class="tab-item focusable active" data-action="main-tab" data-tab="overview">Overview</button>
+        <button class="tab-item focusable" data-action="main-tab" data-tab="myday">My Day</button>
+      </div>
+
+      <div class="content-wrap">
+        <!-- Overview panel -->
+        <div id="panel-overview" class="content main-panel">
+          <div id="ov-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Syncing with Salesforce&hellip;</div>
+          </div>
+          <div id="ov-error" class="error-container hidden">
+            <div class="error-icon">&#9888;</div>
+            <div class="error-message">Could not reach JARVIS.</div>
+            <button class="retry-btn focusable" data-action="refresh">Retry</button>
+          </div>
+          <div id="ov-content" class="hidden">
+            <div class="call-row" id="ov-calls"></div>
+            <div class="card" style="margin-top:10px">
+              <div class="goal-card-head">
+                <span class="card-label">Deals Closed</span>
+                <button class="goal-edit-btn focusable" data-action="open-goals">&#9998; Goals</button>
+              </div>
+              <div id="ov-goal-bars"></div>
+            </div>
+            <div class="ring-row" style="margin-top:10px" id="ov-rings"></div>
+          </div>
+        </div>
+
+        <!-- My Day panel -->
+        <div id="panel-myday" class="content main-panel hidden">
+          <div class="day-nav">
+            <button class="icon-btn focusable" data-action="day-prev" aria-label="Previous day">&#9664;</button>
+            <div class="day-label" id="day-label">Today</div>
+            <button class="icon-btn focusable" data-action="day-next" aria-label="Next day">&#9654;</button>
+          </div>
+          <div id="md-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading today&rsquo;s calls&hellip;</div>
+          </div>
+          <div id="md-error" class="error-container hidden">
+            <div class="error-icon">&#9888;</div>
+            <div class="error-message">Could not load your calls.</div>
+            <button class="retry-btn focusable" data-action="refresh">Retry</button>
+          </div>
+          <div id="myday-list" class="list-container hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Ask JARVIS ============ -->
+    <div id="ask" class="screen hidden">
+      <header class="header">
+        <button class="back-btn focusable" data-action="back" aria-label="Back">&#8592;</button>
+        <span class="header-word" style="font-size:18px;letter-spacing:2px">Ask JARVIS</span>
+        <span class="header-fill"></span>
+      </header>
+      <div class="content">
+        <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
+          <svg class="ask-mic-icon ask-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M6 11a6 6 0 0 0 12 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <svg class="ask-mic-icon ask-icon-stop" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>
+          </svg>
+          <span id="ask-mic-label">Engage Voice Link</span>
+        </button>
+        <div id="ask-mic-unsupported" class="empty-message hidden" style="padding:4px 0 10px">
+          No voice link on this hardware &mdash; select a query below.
+        </div>
+
+        <div class="ask-quick-label">Suggested Queries</div>
+        <div class="list-container" id="ask-quick-list">
+          <button class="wt-row focusable" data-action="ask-quick" data-question="What's on my schedule today?">
+            <span class="wt-who"><span class="wt-name">What&rsquo;s on my schedule today?</span></span>
+          </button>
+          <button class="wt-row focusable" data-action="ask-quick" data-question="Brief me on my next call.">
+            <span class="wt-who"><span class="wt-name">Brief me on my next call</span></span>
+          </button>
+          <button class="wt-row focusable" data-action="ask-quick" data-question="Who are my HOT leads right now?">
+            <span class="wt-who"><span class="wt-name">Who are my HOT leads?</span></span>
+          </button>
+          <button class="wt-row focusable" data-action="ask-quick" data-question="Any pipeline updates or replies I should know about today?">
+            <span class="wt-who"><span class="wt-name">Any updates I should know about?</span></span>
+          </button>
+        </div>
+
+        <div id="ask-result" class="hidden">
+          <div class="ask-transcript" id="ask-transcript"></div>
+          <div id="ask-reply" class="focusable" tabindex="0"></div>
+        </div>
+      </div>
+
+      <!-- Pending-action confirmation overlay — nothing JARVIS proposes
+           (texts, etc.) sends without an explicit Yes here. -->
+      <div id="ask-confirm-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Confirm Before Sending</div>
+          <div class="sheet-preview" id="ask-confirm-preview"></div>
+          <button class="sheet-btn focusable s-green" data-action="confirm-pending-action"><span class="s-dot d-green"></span>Yes, Send It</button>
+          <button class="sheet-btn focusable s-rose" data-action="cancel-pending-action"><span class="s-dot d-rose"></span>No, Discard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Goals editor ============ -->
+    <div id="goals" class="screen hidden">
+      <header class="header">
+        <button class="back-btn focusable" data-action="back" aria-label="Back">&#8592;</button>
+        <span class="header-word" style="font-size:18px;letter-spacing:2px">Goals</span>
+        <span class="header-fill"></span>
+        <span class="header-meta">Deals per period</span>
+      </header>
+      <div class="content" style="gap:10px;justify-content:center">
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Daily</div>
+            <div class="g-sub">deals per day</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="daily" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-daily">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="daily" data-delta="1">+</button>
+        </div>
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Weekly</div>
+            <div class="g-sub">deals per week</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="weekly" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-weekly">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="weekly" data-delta="1">+</button>
+        </div>
+        <div class="goal-edit-row">
+          <div class="goal-edit-label">
+            <div class="g-name">Monthly</div>
+            <div class="g-sub">deals per month</div>
+          </div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="monthly" data-delta="-1">&minus;</button>
+          <div class="goal-edit-value" id="goal-val-monthly">0</div>
+          <button class="counter-btn focusable" data-action="goal-adjust" data-goal="monthly" data-delta="1">+</button>
+        </div>
+        <div class="action-row" style="margin-top:6px">
+          <button class="action-big focusable" data-action="back" style="background:var(--card);color:var(--text-sub)">Cancel</button>
+          <button class="action-big primary focusable" data-action="save-goals">Save Goals</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Profile detail: Overview | DNA ============ -->
+    <div id="detail" class="screen hidden">
+      <header class="header">
+        <button class="back-btn focusable" data-action="back" aria-label="Back">&#8592;</button>
+        <h1 class="detail-title" id="detail-name">Prospect</h1>
+        <span class="header-meta" id="detail-time"></span>
+      </header>
+
+      <div class="badge-row" id="detail-badges"></div>
+
+      <div class="tab-bar">
+        <button class="tab-item focusable active" data-action="tab" data-tab="profile">Overview</button>
+        <button class="tab-item focusable" data-action="tab" data-tab="dna">DNA</button>
+        <button class="tab-item focusable" data-action="tab" data-tab="brief">Brief</button>
+      </div>
+
+      <div class="content-wrap">
+        <div id="tab-profile" class="content tab-panel">
+          <div id="profile-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+          </div>
+          <div id="profile-content" class="hidden">
+            <div class="card stage-card">
+              <span class="card-label">Stage</span>
+              <span class="stage-value" id="profile-stage">&mdash;</span>
+            </div>
+            <div class="demo-grid" id="profile-demo" style="margin-top:2px"></div>
+            <div class="action-row" style="margin-top:4px">
+              <button class="action-big primary focusable" data-action="open-status">&#9998; Status</button>
+              <button class="action-big danger focusable" id="handoff-btn" data-action="open-handoff-confirm">&#10132; Hand Off</button>
+            </div>
+            <div class="card hidden" id="handoff-info">
+              <span class="card-label">Handoff</span>
+              <div style="font-size:13px;color:var(--text-sub);margin-top:4px" id="handoff-info-text"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-dna" class="content tab-panel hidden">
+          <div id="dna-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Reading DNA report&hellip;</div>
+          </div>
+          <div id="dna-content" class="list-container hidden"></div>
+          <div id="dna-empty" class="empty-message hidden"></div>
+        </div>
+
+        <div id="tab-brief" class="content tab-panel hidden">
+          <div id="brief-loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">JARVIS is prepping your brief&hellip;</div>
+          </div>
+          <div id="brief-content" class="hidden focusable" tabindex="0"></div>
+          <div id="brief-empty" class="empty-message hidden"></div>
+        </div>
+      </div>
+
+      <!-- Status sheet overlay -->
+      <div id="status-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Update Status</div>
+          <button class="sheet-btn focusable s-green" data-action="mark-call" data-disposition="completed"><span class="s-dot d-green"></span>Completed</button>
+          <button class="sheet-btn focusable s-rose" data-action="mark-call" data-disposition="no_show"><span class="s-dot d-rose"></span>No Show</button>
+          <button class="sheet-btn focusable s-amber" data-action="mark-call" data-disposition="rescheduled"><span class="s-dot d-amber"></span>Rescheduled</button>
+          <button class="sheet-btn focusable s-rose" data-action="mark-call" data-disposition="canceled"><span class="s-dot d-rose"></span>Canceled</button>
+          <button class="sheet-btn focusable" data-action="close-sheet"><span class="s-dot d-muted"></span>Cancel</button>
+        </div>
+      </div>
+
+      <!-- Handoff confirmation overlay -->
+      <div id="handoff-confirm-sheet" class="sheet-backdrop hidden">
+        <div class="sheet">
+          <div class="sheet-title">Hand Off This Call?</div>
+          <div class="sheet-sub">Moves it to the claimables pool for another rep to pick up.</div>
+          <button class="sheet-btn focusable s-rose" data-action="confirm-handoff"><span class="s-dot d-rose"></span>Hand It Off</button>
+          <button class="sheet-btn focusable" data-action="close-sheet"><span class="s-dot d-muted"></span>Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="app.js?v=18"></script>
+</body>
+</html>

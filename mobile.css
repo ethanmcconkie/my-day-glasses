@@ -1,0 +1,43 @@
+/* JARVIS — mobile (iPhone) overrides.
+   Loaded AFTER styles.css, which is shared with the glasses build. Only the
+   things that genuinely differ between a 600x600 additive display and a
+   phone screen belong here — everything else (data, screens, behavior)
+   lives in app.js and applies to both automatically. */
+
+html, body {
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+/* Phone screens aren't see-through like the glasses' additive display, so a
+   flat black background reads as a normal dark-mode app rather than a void. */
+#app { background: var(--bg-page); }
+
+/* Respect the iPhone notch / home indicator instead of drawing under them. */
+.screen {
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  padding-left: max(8px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right));
+}
+
+/* Touch has no hover/focus-ring concept the way D-pad focus does — drop the
+   glow/scale treatment so taps don't flash a focus ring, but keep active-press
+   feedback so buttons still feel responsive. */
+.focusable:focus {
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.focusable:active {
+  transform: scale(0.97);
+}
+
+/* The glasses build turns off native scroll bounce implicitly (fixed 600x600,
+   overflow hidden on the shell); on a phone, allow the natural rubber-band
+   scroll inside panels for a native feel. */
+.content, .content-wrap {
+  -webkit-overflow-scrolling: touch;
+}
