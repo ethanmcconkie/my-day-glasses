@@ -38,7 +38,7 @@
     },
     goalsDraft: { daily: 0, weekly: 0, monthly: 0 },
     countdownTimer: null,
-    openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | 'ask-confirm-sheet' | null
+    openSheetId: null, // 'status-sheet' | 'handoff-confirm-sheet' | 'unlock-confirm-sheet' | 'ask-confirm-sheet' | null
     pendingAction: null, // {type, summary, params} awaiting a Yes/No from ask-confirm-sheet
   };
 
@@ -727,6 +727,35 @@
           '</div><div class="demo-value">' + escapeHtml(String(c[1])) + '</div></div>';
       })
       .join('');
+
+    renderReportState(p.reportReleasedDate || null);
+  }
+
+  function renderReportState(releasedDate) {
+    var btn = $('unlock-report-btn');
+    var info = $('report-released-info');
+    if (releasedDate) {
+      btn.classList.add('hidden');
+      info.classList.remove('hidden');
+      var when = new Date(releasedDate + 'T00:00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      $('report-released-text').textContent = 'Unlocked ' + when;
+    } else {
+      btn.classList.remove('hidden');
+      info.classList.add('hidden');
+    }
+  }
+
+  function handleUnlockReport() {
+    var call = state.selectedCall;
+    if (!call) return;
+    showToast('Unlocking report…');
+    apiPost(CONFIG.api.baseUrl + '/api/unlock-report', { oppId: call.oppId })
+      .then(function(data) {
+        showToast('Report unlocked', 'success');
+        closeSheet();
+        renderReportState(data.reportReleasedDate);
+      })
+      .catch(function(err) { showToast('Failed: ' + err.message, 'error'); });
   }
 
   function loadHandoffState() {
@@ -1116,6 +1145,8 @@
       case 'mark-call': markCall(element.dataset.disposition); break;
       case 'open-handoff-confirm': openSheet('handoff-confirm-sheet'); break;
       case 'confirm-handoff': handleHandoff(); break;
+      case 'open-unlock-confirm': openSheet('unlock-confirm-sheet'); break;
+      case 'confirm-unlock-report': handleUnlockReport(); break;
     }
   }
 
