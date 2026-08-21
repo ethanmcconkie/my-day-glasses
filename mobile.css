@@ -43,11 +43,12 @@ body {
   display: none;
 }
 
-/* Respect the iPhone notch / home indicator instead of drawing under them —
-   only the actual safe-area inset, no extra reserved minimum on top of it. */
+/* Respect the notch/Dynamic Island up top (content would be hidden behind
+   it otherwise) but let content run all the way to the bottom edge — the
+   home indicator is just a thin translucent overlay, not something that
+   blocks content the way the top sensor housing does. */
 .screen {
   padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
