@@ -20,6 +20,13 @@ body {
    flat black background reads as a normal dark-mode app rather than a void. */
 #app { background: var(--bg-page); }
 
+/* Drop the glasses build's bottom scroll-fade shadow — a subtle "more below"
+   cue on the small 600x600 display, but an odd dark smear at the bottom of a
+   tall phone screen. */
+.content-wrap::after {
+  display: none;
+}
+
 /* Respect the iPhone notch / home indicator instead of drawing under them. */
 .screen {
   padding-top: max(8px, env(safe-area-inset-top));
