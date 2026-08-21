@@ -728,17 +728,16 @@
       })
       .join('');
 
-    renderReportState(p.reportReleasedDate || null);
+    renderReportState(!!p.reportUnlocked);
   }
 
-  function renderReportState(releasedDate) {
+  function renderReportState(unlocked) {
     var btn = $('unlock-report-btn');
     var info = $('report-released-info');
-    if (releasedDate) {
+    if (unlocked) {
       btn.classList.add('hidden');
       info.classList.remove('hidden');
-      var when = new Date(releasedDate + 'T00:00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      $('report-released-text').textContent = 'Unlocked ' + when;
+      $('report-released-text').textContent = 'Report unlocked';
     } else {
       btn.classList.remove('hidden');
       info.classList.add('hidden');
@@ -750,10 +749,10 @@
     if (!call) return;
     showToast('Unlocking report…');
     apiPost(CONFIG.api.baseUrl + '/api/unlock-report', { oppId: call.oppId })
-      .then(function(data) {
+      .then(function() {
         showToast('Report unlocked', 'success');
         closeSheet();
-        renderReportState(data.reportReleasedDate);
+        renderReportState(true);
       })
       .catch(function(err) { showToast('Failed: ' + err.message, 'error'); });
   }
