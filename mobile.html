@@ -56,6 +56,11 @@
   <div id="debug-readout" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(255,0,0,0.85);color:#fff;font:10px/1.4 monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:none;"></div>
   <script>
     (function() {
+      function r(el) {
+        if (!el) return 'n/a';
+        var b = el.getBoundingClientRect();
+        return Math.round(b.width) + '/' + Math.round(b.height) + '@' + Math.round(b.top) + ',' + Math.round(b.left);
+      }
       function fmt() {
         var vv = window.visualViewport;
         var app = document.getElementById('app');
@@ -66,16 +71,31 @@
         var cs = getComputedStyle(probe);
         var safeTop = cs.paddingTop, safeBottom = cs.paddingBottom;
         document.body.removeChild(probe);
-        return [
+
+        var homeScreen = document.getElementById('home');
+        var contentWrap = homeScreen ? homeScreen.querySelector('.content-wrap') : null;
+        var panelMyday = document.getElementById('panel-myday');
+        var mydayList = document.getElementById('myday-list');
+        var rows = mydayList ? mydayList.querySelectorAll('.wt-row') : [];
+        var lastRow = rows.length ? rows[rows.length - 1] : null;
+
+        var lines = [
           'standalone=' + (window.navigator.standalone),
           'innerW/H=' + window.innerWidth + '/' + window.innerHeight,
-          'vv W/H=' + (vv ? vv.width + '/' + vv.height : 'n/a'),
-          'docClientW/H=' + document.documentElement.clientWidth + '/' + document.documentElement.clientHeight,
-          'screenW/H=' + window.screen.width + '/' + window.screen.height,
           'appRect=' + (appRect ? Math.round(appRect.width) + '/' + Math.round(appRect.height) + ' @' + Math.round(appRect.top) + ',' + Math.round(appRect.left) : 'n/a'),
           'safeTop/Bottom=' + safeTop + '/' + safeBottom,
-          'dpr=' + window.devicePixelRatio,
-        ].join('  |  ');
+        ];
+        if (panelMyday && !panelMyday.classList.contains('hidden')) {
+          lines.push(
+            'homeScreen=' + r(homeScreen),
+            'contentWrap=' + r(contentWrap),
+            'panelMyday(content)=' + r(panelMyday) +
+              '  scrollH/clientH/scrollTop=' + panelMyday.scrollHeight + '/' + panelMyday.clientHeight + '/' + Math.round(panelMyday.scrollTop),
+            'mydayList=' + r(mydayList),
+            'rows=' + rows.length + '  lastRow=' + r(lastRow)
+          );
+        }
+        return lines.join('  |  ');
       }
       function update() {
         var el = document.getElementById('debug-readout');
@@ -88,6 +108,9 @@
       setTimeout(update, 300);
       setTimeout(update, 1000);
       if (window.visualViewport) window.visualViewport.addEventListener('resize', update);
+      // capture phase: scroll doesn't bubble, and #panel-myday doesn't exist
+      // yet when this script runs, so listen on document instead of it directly
+      document.addEventListener('scroll', update, true);
     })();
   </script>
   <div id="app">
