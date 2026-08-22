@@ -25,7 +25,7 @@
        discovering it once styles.css is parsed — shrinks the gap between
        the OS's native icon splash and this page's own animation starting. -->
   <link rel="preload" href="splash-sprite-alpha.png?v=1" as="image">
-  <link rel="stylesheet" href="styles.css?v=16">
+  <link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
   <div id="app">
@@ -114,6 +114,10 @@
         <span class="header-fill"></span>
       </header>
       <div class="content">
+        <label for="ask-text-input" class="ask-quick-label" style="margin-top:0">Ask Anything</label>
+        <textarea id="ask-text-input" class="focusable ask-text-input" rows="2"
+          placeholder="Tap to type or speak your question" aria-label="Ask JARVIS"></textarea>
+
         <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
           <svg class="ask-mic-icon ask-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -305,6 +309,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

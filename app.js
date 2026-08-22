@@ -1188,6 +1188,19 @@
         case 'Escape': navigateBack(); e.preventDefault(); break;
       }
     });
+
+    // Composer commits fire 'change' on blur — not 'keydown', there's no
+    // hardware keyboard. Guarded: index.html and mobile.html each keep their
+    // own copy of the Ask JARVIS markup and have drifted before.
+    var askTextInput = $('ask-text-input');
+    if (askTextInput) {
+      askTextInput.addEventListener('change', function() {
+        var text = askTextInput.value.trim();
+        if (!text) return;
+        askTextInput.value = '';
+        sendQuickQuestion(text);
+      });
+    }
   }
 
   // ==================== INIT ====================

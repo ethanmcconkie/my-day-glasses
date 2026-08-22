@@ -17,7 +17,7 @@
   <title>JARVIS</title>
   <link rel="icon" href="icon-96.png" sizes="96x96">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=17">
   <!-- Staging-only override: production styles.css has the 12-frame PNG
        sprite splash rule; this page tests a 36-frame transparent sprite
        (background removed via alpha) without touching the shared stylesheet. -->
@@ -121,6 +121,10 @@
         <span class="header-fill"></span>
       </header>
       <div class="content">
+        <label for="ask-text-input" class="ask-quick-label" style="margin-top:0">Ask Anything</label>
+        <textarea id="ask-text-input" class="focusable ask-text-input" rows="2"
+          placeholder="Tap to type or speak your question" aria-label="Ask JARVIS"></textarea>
+
         <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
           <svg class="ask-mic-icon ask-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -295,6 +299,6 @@
     </div>
 
   </div>
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
