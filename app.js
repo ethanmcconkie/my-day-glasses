@@ -1180,8 +1180,15 @@
         case 'ArrowLeft':  moveFocus('left');  e.preventDefault(); break;
         case 'ArrowRight': moveFocus('right'); e.preventDefault(); break;
         case 'Enter':
-          if (document.activeElement && document.activeElement.classList.contains('focusable')) {
-            document.activeElement.click();
+          var activeEl = document.activeElement;
+          // Text/textarea fields open the on-glasses composer via their own
+          // native tap handling. Dispatching a second synthetic click here
+          // (on top of the real one that opened it) re-triggers/cancels the
+          // composer before its commit lands -- so skip those, but keep the
+          // synthetic click for custom focusable elements (e.g. .wt-row).
+          if (activeEl && activeEl.classList.contains('focusable') &&
+              activeEl.tagName !== 'TEXTAREA' && activeEl.tagName !== 'INPUT') {
+            activeEl.click();
           }
           e.preventDefault();
           break;
