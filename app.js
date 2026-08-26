@@ -4,7 +4,7 @@
   // Bump on every deploy that touches diagnostics — lets a build be
   // confirmed as "actually running" from the device itself, with no
   // devtools/console access needed (e.g. shown in an error toast).
-  var BUILD = 'v18';
+  var BUILD = 'v19';
 
   // ==================== CONFIG ====================
   var CONFIG = {
@@ -1059,6 +1059,20 @@
       });
   }
 
+  // Single submit path, reached two ways: the 'change' listener below (fires
+  // when the glasses composer's field loses focus — i.e. the user D-pads
+  // away, not just dismisses the composer panel) and the visible Send button
+  // (data-action="ask-send"), which reads .value directly so it works even
+  // if the user never navigates off the field after composing/dictating.
+  function submitAskText() {
+    var input = $('ask-text-input');
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    sendQuickQuestion(text);
+  }
+
   function presentAskResult(transcript, reply, pendingAction) {
     setAskStatus('idle');
     $('ask-transcript').innerHTML =
@@ -1126,6 +1140,7 @@
       case 'open-ask': navigateTo('ask'); break;
       case 'ask-mic-toggle': toggleAskMic(); break;
       case 'ask-quick': sendQuickQuestion(element.dataset.question); break;
+      case 'ask-send': submitAskText(); break;
       case 'confirm-pending-action': confirmPendingAction(); break;
       case 'cancel-pending-action': cancelPendingAction(); break;
       case 'open-call':
@@ -1196,17 +1211,18 @@
       }
     });
 
-    // Composer commits fire 'change' on blur — not 'keydown', there's no
-    // hardware keyboard. Guarded: index.html and mobile.html each keep their
-    // own copy of the Ask JARVIS markup and have drifted before.
+    // Per Meta's MRBD composer docs: the on-glasses composer commits text via
+    // 'input' as the user writes, and fires 'change' only once the field
+    // loses focus (user D-pads away — closing the composer panel alone does
+    // not blur the field). No keydown listener here: a pinch on a focused
+    // text field fires a synthetic Enter to open the composer natively, and
+    // Meta's docs explicitly warn against listening for keydown on these
+    // fields since there's no physical keyboard. Guarded: index.html and
+    // mobile.html each keep their own copy of the Ask JARVIS markup and have
+    // drifted before.
     var askTextInput = $('ask-text-input');
     if (askTextInput) {
-      askTextInput.addEventListener('change', function() {
-        var text = askTextInput.value.trim();
-        if (!text) return;
-        askTextInput.value = '';
-        sendQuickQuestion(text);
-      });
+      askTextInput.addEventListener('change', submitAskText);
     }
   }
 

@@ -787,6 +787,22 @@ button {
 .ask-text-input::placeholder { color: var(--text-sub); }
 .ask-text-input:focus { border-color: var(--purple); box-shadow: 0 0 22px rgba(168,85,247,0.35); }
 
+.ask-send-btn {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--card-raised);
+  color: var(--purple);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  transition: background 0.3s var(--ease-color), box-shadow 0.3s var(--ease-color);
+}
+.ask-send-btn:focus { border-color: var(--purple); box-shadow: 0 0 22px rgba(168,85,247,0.35); }
+.ask-send-btn:active { background: var(--purple-soft); }
+
 .ask-mic-btn {
   width: 100%;
   min-height: 88px;

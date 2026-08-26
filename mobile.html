@@ -117,8 +117,9 @@
       </header>
       <div class="content">
         <label for="ask-text-input" class="ask-quick-label" style="margin-top:0">Ask Anything</label>
-        <textarea id="ask-text-input" class="focusable ask-text-input" rows="2"
+        <textarea id="ask-text-input" class="focusable ask-text-input" rows="2" enterkeyhint="send"
           placeholder="Tap to type or speak your question" aria-label="Ask JARVIS"></textarea>
+        <button class="ask-send-btn focusable" id="ask-send-btn" data-action="ask-send">Send to JARVIS</button>
 
         <button class="ask-mic-btn focusable" id="ask-mic-btn" data-action="ask-mic-toggle">
           <svg class="ask-mic-icon ask-icon-mic" viewBox="0 0 24 24" aria-hidden="true">
