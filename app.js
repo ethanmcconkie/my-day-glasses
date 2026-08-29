@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://personality-robin-rounds-busy.trycloudflare.com',
+      baseUrl: 'https://shuttle-overview-agencies-trigger.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
