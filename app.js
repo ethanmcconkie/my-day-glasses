@@ -4,7 +4,7 @@
   // Bump on every deploy that touches diagnostics — lets a build be
   // confirmed as "actually running" from the device itself, with no
   // devtools/console access needed (e.g. shown in an error toast).
-  var BUILD = 'v19';
+  var BUILD = 'v20';
 
   // ==================== CONFIG ====================
   var CONFIG = {
@@ -1068,7 +1068,10 @@
     var input = $('ask-text-input');
     if (!input) return;
     var text = input.value.trim();
-    if (!text) return;
+    if (!text) {
+      showToast('Diag: Send tapped, field is empty [' + BUILD + ']');
+      return;
+    }
     input.value = '';
     sendQuickQuestion(text);
   }
@@ -1223,6 +1226,30 @@
     var askTextInput = $('ask-text-input');
     if (askTextInput) {
       askTextInput.addEventListener('change', submitAskText);
+
+      // TEMP DIAGNOSTICS (remove once the post-update composer commit is
+      // confirmed working again): the update to the Meta AI app / glasses OS
+      // broke the composer's commit into this field for BOTH typed and
+      // dictated text, even though the composer's own overlay still shows
+      // the recognized text. These toasts turn "doesn't work" into "which
+      // step doesn't fire" without needing devtools/console access on the
+      // glasses. One-shot per event type so the toast doesn't spam.
+      var _seenFocus = false, _seenInput = false, _seenChange = false;
+      askTextInput.addEventListener('focus', function() {
+        if (_seenFocus) return;
+        _seenFocus = true;
+        showToast('Diag: field focused [' + BUILD + ']');
+      });
+      askTextInput.addEventListener('input', function() {
+        if (_seenInput) return;
+        _seenInput = true;
+        showToast('Diag: input fired, value="' + askTextInput.value + '" [' + BUILD + ']');
+      });
+      askTextInput.addEventListener('change', function() {
+        if (_seenChange) return;
+        _seenChange = true;
+        showToast('Diag: change fired, value="' + askTextInput.value + '" [' + BUILD + ']');
+      });
     }
   }
 
