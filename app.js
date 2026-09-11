@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://mountains-releases-pairs-tasks.trycloudflare.com',
+      baseUrl: 'https://sega-county-amber-angle.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
