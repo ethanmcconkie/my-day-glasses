@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://headed-unavailable-buffalo-usual.trycloudflare.com',
+      baseUrl: 'https://racks-section-reproduced-gates.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
