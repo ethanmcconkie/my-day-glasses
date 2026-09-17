@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://racks-section-reproduced-gates.trycloudflare.com',
+      baseUrl: 'https://liberty-updated-deaf-survive.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
