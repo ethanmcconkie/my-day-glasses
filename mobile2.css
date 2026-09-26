@@ -222,3 +222,5 @@ input::placeholder,textarea::placeholder{color:var(--dim)}
 
 /* desktop preview: keep the phone layout centered */
 @media (min-width:600px){#app{left:50%;right:auto;width:430px;margin-left:-215px;box-shadow:0 0 0 1px rgba(255,255,255,.06)}}
+
+.offline{position:fixed;left:50%;bottom:calc(var(--tab-h) + 8px);transform:translateX(-50%);z-index:40;padding:6px 14px;border-radius:999px;background:#2b2413;color:var(--amber);font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.4)}

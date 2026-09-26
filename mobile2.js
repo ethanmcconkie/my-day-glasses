@@ -4,7 +4,7 @@
    Override for local testing: mobile.html?api=http://localhost:8787 */
 (function () {
   'use strict';
-  var BUILD = 'm2.0';
+  var BUILD = 'm2.1';
   var REP = 'Ethan McConkie';
   var REPQ = 'rep=' + encodeURIComponent(REP);
 
@@ -76,6 +76,44 @@
     document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2800);
   }
 
+  // ---------- data cache (stale-while-revalidate) ----------
+  // Last-known data is saved on the phone so the app opens instantly and still shows
+  // pipeline / profiles / past calls when the API or tunnel is unreachable.
+  var CK = 'jarvis_m2_cache_v1', persistTimer = null;
+  function cacheLoad() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CK) || 'null');
+      if (!c || Date.now() - c.t > 7 * 864e5) return;
+      S.overview = c.overview || null; S.myday = c.myday || {}; S.analyses = c.analyses || null; S.pipeline = c.pipeline || null;
+      S.profiles = c.profiles || {}; S.dna = c.dna || {}; S.extras = c.extras || {}; S.phoneProfiles = c.phoneProfiles || {};
+      if (c.history) S.live = { on_call: false, history: c.history };
+      S.cacheAt = c.t;
+    } catch (e) {}
+  }
+  function ready(o) {
+    var out = {};
+    Object.keys(o || {}).slice(-40).forEach(function (k) { var v = o[k]; if (v && !v.loading && !v.notFound) out[k] = v; });
+    return out;
+  }
+  function slimExtras(ex) {
+    var out = {};
+    Object.keys(ex || {}).slice(-15).forEach(function (k) {
+      var v = ex[k]; if (!v || v.loading) return;
+      out[k] = { notes: v.notes || [], activity: v.activity || [], transcripts: (v.transcripts || []).slice(0, 3).map(function (t) { return { date: t.date, recording_id: t.recording_id, text: String(t.text || '').slice(0, 6000) }; }) };
+    });
+    return out;
+  }
+  function persist() {
+    var snap = { t: Date.now(), overview: S.overview, myday: S.myday, analyses: S.analyses, pipeline: S.pipeline, profiles: ready(S.profiles), dna: ready(S.dna),
+      extras: slimExtras(S.extras), phoneProfiles: ready(S.phoneProfiles), history: (S.live && S.live.history) || (S.liveCache && S.liveCache.history) || null };
+    try { localStorage.setItem(CK, JSON.stringify(snap)); }
+    catch (e) { try { snap.extras = {}; localStorage.setItem(CK, JSON.stringify(snap)); } catch (e2) {} }
+  }
+  function markFresh() {
+    S.cacheAt = Date.now(); S.apiOk = true;
+    clearTimeout(persistTimer); persistTimer = setTimeout(persist, 1500);
+  }
+
   // ---------- api ----------
   function resolveBase() {
     var q = new URLSearchParams(location.search).get('api');
@@ -91,7 +129,7 @@
       clearTimeout(timer);
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok || (d && d.success === false)) throw new Error((d && d.error) || 'HTTP ' + r.status);
-        S.apiOk = true; return d;
+        markFresh(); return d;
       });
     }).catch(function (e) {
       clearTimeout(timer);
@@ -130,6 +168,11 @@
     return get('/api/profile-extras?oppId=' + encodeURIComponent(oppId)).then(function (d) {
       S.extras[oppId] = (d && !d.error) ? d : { notes: [], activity: [], transcripts: [] };
     }).catch(function () { S.extras[oppId] = { notes: [], activity: [], transcripts: [] }; }).then(render);
+  }
+  // Cached profile: show it now, quietly refresh it in the background.
+  function refreshProfile(oppId) {
+    get('/api/profile?oppId=' + encodeURIComponent(oppId)).then(function (p) { if (p && !p.error) { S.profiles[oppId] = p; render(); } }).catch(function () {});
+    get('/api/profile-extras?oppId=' + encodeURIComponent(oppId)).then(function (d) { if (d && !d.error) { S.extras[oppId] = d; render(); } }).catch(function () {});
   }
   function loadDna(accountId) {
     if (S.dna[accountId]) return Promise.resolve();
@@ -333,7 +376,7 @@
     if (pp.notFound) return '<div class="empty">No matching profile for this number.</div>';
     return profileSummary(pp, true);
   }
-  function since(iso) { var s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000)); return s < 5 ? 'just now' : s < 60 ? s + 's ago' : Math.floor(s / 60) + 'm ago'; }
+  function since(iso) { var s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000)); return s < 5 ? 'just now' : s < 60 ? s + 's ago' : s < 3600 ? Math.floor(s / 60) + 'm ago' : s < 86400 ? Math.floor(s / 3600) + 'h ago' : Math.floor(s / 86400) + 'd ago'; }
   function callHTML() {
     var c = callData();
     if (!c) return '<div class="scroll"><button class="back" data-act="back">&#8249; Calls</button><div class="empty">The call has ended.</div></div>';
@@ -554,7 +597,8 @@
     var key = ov ? ov.type + (ov.oppId || ov.sid || '') : S.view;
     $app.classList.toggle('live-bg', !!ov && ov.type !== 'profile' || (!ov && S.view === 'calls' && liveOn()));
     var focusId = document.activeElement && document.activeElement.id, val = focusId && document.activeElement.value;
-    $app.innerHTML = html + (ov && ov.type !== 'profile' ? '' : tabbarHTML()) + sheetHTML();
+    var pill = !S.apiOk && S.cacheAt ? '<div class="offline">Offline &middot; showing saved data from ' + since(new Date(S.cacheAt).toISOString()).replace(' ago', '') + ' ago</div>' : '';
+    $app.innerHTML = html + (ov && ov.type !== 'profile' ? '' : tabbarHTML()) + pill + sheetHTML();
     var el = $app.querySelector('.scroll'); if (el && key === lastKey) el.scrollTop = st;
     if (ov && ov.type !== 'profile' && ov.type) { var lb = document.getElementById('livebody'); if (lb && S.liveTab === 'tx' && key !== lastKey) lb.scrollTop = lb.scrollHeight; }
     lastKey = key;
@@ -565,7 +609,7 @@
   function openOverlay(o) {
     S.overlay = o; try { history.pushState({ o: 1 }, ''); } catch (e) {}
     if (o.type === 'past') loadPast(o.sid);
-    if (o.type === 'profile') { S.profTab = 'overview'; }
+    if (o.type === 'profile') { S.profTab = 'overview'; if (S.profiles[o.oppId] && !S.profiles[o.oppId].loading) refreshProfile(o.oppId); }
     if (o.type === 'live') S.liveTab = 'tx';
     render();
   }
@@ -667,6 +711,8 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { fetchLive(); if (S.view === 'home') loadOverview(); } });
 
   // ---------- boot ----------
+  cacheLoad();
+  if (S.cacheAt) render();
   resolveBase().then(function (b) {
     S.base = b;
     render();
