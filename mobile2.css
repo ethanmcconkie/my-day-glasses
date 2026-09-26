@@ -4,7 +4,7 @@
   --purple:#c9b6ea; --blue:#7fd4f5; --green:#93e6b8; --amber:#f5c97a; --rose:#f5a3b0; --sky:#7ec8e3;
   --card:rgba(255,255,255,.05); --card-line:rgba(255,255,255,.07);
   --sora:Sora,Manrope,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,SFMono-Regular,Consolas,monospace;
-  --tab-h:84px;
+  --tab-h:66px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
@@ -172,7 +172,7 @@ input::placeholder,textarea::placeholder{color:var(--dim)}
 .note{font-size:11px;color:var(--muted);text-align:center}
 
 /* tab bar */
-.tabbar{flex:none;height:calc(var(--tab-h) - 26px + max(env(safe-area-inset-bottom),26px));padding:8px 14px max(env(safe-area-inset-bottom),26px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;background:rgba(14,11,22,.92);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.tabbar{flex:none;height:auto;padding:8px 14px max(calc(env(safe-area-inset-bottom) - 18px),10px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;background:rgba(14,11,22,.92);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
 .tabbar button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;color:var(--dim);font-size:10px;font-weight:700;min-height:44px}
 .tabbar button.on{color:var(--purple);font-weight:800}
 .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
