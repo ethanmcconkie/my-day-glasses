@@ -4,7 +4,7 @@
    Override for local testing: mobile.html?api=http://localhost:8787 */
 (function () {
   'use strict';
-  var BUILD = 'm2.1';
+  var BUILD = 'm2.2';
   var REP = 'Ethan McConkie';
   var REPQ = 'rep=' + encodeURIComponent(REP);
 
@@ -709,6 +709,20 @@
   }, 1000);
   setInterval(function () { if (!S.overlay && !S.sheet && document.activeElement && document.activeElement.tagName !== 'INPUT') { if (S.view === 'home') { loadOverview(); loadAnalyses(); } else if (S.view === 'day') loadMyday(S.dayOffset); } }, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { fetchLive(); if (S.view === 'home') loadOverview(); } });
+
+  // TEMP diagnostic (remove once bottom spacing is confirmed): shows real viewport numbers on the phone.
+  (function () {
+    var d = document.createElement('div'); d.id = 'dbg'; var pr = document.createElement('div'); pr.className = 'probe';
+    document.body.appendChild(pr); document.body.appendChild(d);
+    function upd() {
+      var a = $app.getBoundingClientRect(), cs = getComputedStyle(pr), tb = document.querySelector('.tabbar'), t = tb && tb.getBoundingClientRect();
+      var vv = window.visualViewport;
+      d.textContent = 'ih ' + innerHeight + ' sh ' + screen.height + ' ch ' + document.documentElement.clientHeight + ' vv ' + (vv ? Math.round(vv.height) : '-') +
+        ' | app ' + Math.round(a.top) + '-' + Math.round(a.bottom) + ' tab ' + (t ? Math.round(t.top) + '-' + Math.round(t.bottom) : '-') +
+        ' | safe t' + cs.paddingTop + ' b' + cs.paddingBottom + ' | sa ' + (navigator.standalone ? 'yes' : 'no');
+    }
+    setInterval(upd, 1000); upd();
+  })();
 
   // ---------- boot ----------
   cacheLoad();
