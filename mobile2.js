@@ -202,11 +202,27 @@
     if (liveOn()) { S.liveCache = S.live; loadPhoneProfile(S.live.phone); }
     if (S.overlay && S.overlay.type === 'live') patchLive(); else render();
   }
-  function fetchLive() { return get('/api/live-call').then(function (d) { if (d && !d.error) { S.live = d; noteLive(); } }).catch(function () {}); }
+  function liveSig(d) {
+    var ps = (d && d.paragraphs) || [], last = ps.length ? ps[ps.length - 1] : null;
+    return [d && d.on_call, d && d.call_sid, ps.length, last ? (last.text || '').length : 0, d && d.notes_updated_at, d && (d.notes_full || d.notes || '').length].join('|');
+  }
+  var liveBusy = false;
+  function fetchLive() {
+    if (liveBusy) return Promise.resolve();
+    liveBusy = true;
+    return get('/api/live-call').then(function (d) {
+      if (d && !d.error) { var changed = liveSig(d) !== liveSig(S.live); S.live = d; if (changed || !S.liveSeen) { S.liveSeen = true; noteLive(); } }
+    }).catch(function () {}).then(function () { liveBusy = false; });
+  }
   var es = null;
   function initLive() {
     fetchLive();
-    setInterval(fetchLive, 20000);
+    // The tunnel can buffer the SSE stream, so poll fast while a call is live (or its screen is open) and slow otherwise.
+    (function tick() {
+      fetchLive();
+      var fast = liveOn() || (S.overlay && S.overlay.type === 'live');
+      setTimeout(tick, document.hidden ? 20000 : fast ? 1500 : 8000);
+    })();
     if (typeof EventSource === 'undefined') return;
     try {
       es = new EventSource(S.base + '/api/live-call-events');
