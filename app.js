@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://watershed-legislative-venice-sorted.trycloudflare.com',
+      baseUrl: 'https://elected-california-recorder-enemies.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
