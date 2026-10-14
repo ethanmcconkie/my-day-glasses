@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://mumbai-spread-sources-manager.trycloudflare.com',
+      baseUrl: 'https://sheet-quarter-tulsa-pike.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
