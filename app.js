@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://knives-americas-running-sections.trycloudflare.com',
+      baseUrl: 'https://colours-tattoo-roughly-interests.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
