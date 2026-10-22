@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://stolen-leisure-photographers-ventures.trycloudflare.com',
+      baseUrl: 'https://exclusively-pending-nested-keywords.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
