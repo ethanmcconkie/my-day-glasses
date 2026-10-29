@@ -10,7 +10,7 @@
   var CONFIG = {
     appName: 'JARVIS',
     api: {
-      baseUrl: 'https://discovery-loans-belle-climate.trycloudflare.com',
+      baseUrl: 'https://explore-centers-core-gate.trycloudflare.com',
       cacheDuration: 60 * 1000, // live schedule — keep it fresh
     },
     splashMinMs: 2200,
